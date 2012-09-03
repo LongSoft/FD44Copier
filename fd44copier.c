@@ -1,5 +1,5 @@
 #include <stdio.h>
-
+#include <malloc.h>
 #include "bios.h"
 
 #define ERR_OK                  0;
@@ -13,7 +13,7 @@
 #define ERR_NO_GBE              8;
 
 /* memmem implementation using Boyer-Moore-Horspool algorithm */
-char* memmem(unsigned char* string, long int slen, unsigned char* pattern, long int plen)
+unsigned char* memmem(unsigned char* string, long slen, const unsigned char* pattern, long plen)
 {
     long int scan = 0;
     long int bad_char_skip[256];
@@ -49,11 +49,13 @@ int main(int argc, char* argv[])
     unsigned char* buffer;                                          /* buffer to read input and output file into */
     long int filesize;                                              /* size of opened file */                                              
     long int read;                                                  /* read bytes counter */
+    unsigned char* ubf;                                             /* UBF signature */
     unsigned char* bootefi;                                         /* bootefi signature */
     unsigned char* gbe;                                             /* GbE header */
     unsigned char* fd44;                                            /* module in search */
     unsigned char* module;                                          /* found module */
     long int rest;                                                  /* size of the rest of buffer in search*/
+    char hasUbf;                                                    /* flag that output file has UBF header */
     char hasGbe;                                                    /* flag that input file has GbE region */
     char isEmpty;                                                   /* flag that module in input file is empty */
 
@@ -63,7 +65,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("FD44Copier v0.1b\nThis program copies MAC address and FD44 block\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
+        printf("FD44Copier v0.2b\nThis program copies MAC address and FD44 block\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
         return ERR_ARGS;
     }
     
@@ -113,6 +115,17 @@ int main(int argc, char* argv[])
     if (gbe)
     {
         hasGbe = 1;
+        /* Check if first GbE is a stub */
+        if (!memcmp(gbe + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
+        {
+            unsigned char* gbe2;
+            rest = filesize - (gbe - buffer) - sizeof(GBE_HEADER);
+            gbe2 = memmem(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
+            /* Check if second GbE is not a stub */
+            if (memcmp(gbe2 + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
+                gbe = gbe2;
+        }
+
         memcpy(gbeMac, gbe + GBE_MAC_OFFSET, GBE_MAC_LENGTH);
     }
     
@@ -189,6 +202,16 @@ int main(int argc, char* argv[])
         return ERR_OUTPUT_FILE;
     }
 
+    /* Search for UBF signature, if found - remove UBF header */
+    hasUbf = 0;
+    ubf = memmem(buffer, filesize, UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
+    if (ubf)
+    {
+        hasUbf = 1;
+        buffer += UBF_FILE_HEADER_SIZE;
+        filesize -= UBF_FILE_HEADER_SIZE;
+    }
+
     /* Search for bootefi signature */  
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
@@ -207,6 +230,7 @@ int main(int argc, char* argv[])
     /* If input file had GbE block, search for it in output file and replace it */
     if (hasGbe)
     {
+        /* First GbE block */
         gbe = memmem(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
         if (!gbe)
         {
@@ -214,6 +238,12 @@ int main(int argc, char* argv[])
             return ERR_NO_GBE;
         }
         memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac));
+
+        /* Second GbE block */
+        rest = filesize - (gbe - buffer) - sizeof(GBE_HEADER);
+        gbe = memmem(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
+        if(gbe)
+            memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac));
     }
 
     /* Search for module header */
@@ -236,18 +266,23 @@ int main(int argc, char* argv[])
         fd44 = memmem(fd44 + 1, rest, MODULE_HEADER, sizeof(MODULE_HEADER));
         rest = filesize - (fd44 - buffer);
     }
+    
+    /* Reopen file to resize it */
+    fclose(file);
+    file = fopen(argv[2], "wb");
 
     /* Write buffer to output file */
-    fseek(file, 0, SEEK_SET);
     read = fwrite(buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
         fprintf(stderr, "Can't write output file.\n");
         return ERR_OUTPUT_FILE;
     }
-
-    fclose(file);
+    
+    if (hasUbf)
+        buffer -= UBF_FILE_HEADER_SIZE;
     free(buffer);
+    fclose(file);
 
     return ERR_OK;
 }

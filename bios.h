@@ -1,6 +1,13 @@
 #ifndef BIOS_H
 #define BIOS_H
 
+/* USB BIOS Flashback file header */
+static const char UBF_FILE_HEADER[] =							{'\x8B','\xA6','\x3C','\x4A','\x23',
+                                                                 '\x77','\xFB','\x48','\x80','\x3D',
+                                                                 '\x57','\x8C','\xC1','\xFE','\xC4',
+                                                                 '\x4D'};
+#define UBF_FILE_HEADER_SIZE 0x800
+
 /* BOOTEFI marker */
 static const char BOOTEFI_HEADER[] =                            {'$','B','O','O','T','E','F','I','$'};
 #define BOOTEFI_MOTHERBOARD_NAME_OFFSET 14
