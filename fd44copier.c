@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <malloc.h>
+#include <memory.h>
 #include "bios.h"
 
 #define ERR_OK                  0;
@@ -18,18 +19,18 @@ unsigned char* memmem(unsigned char* string, long slen, const unsigned char* pat
     long int scan = 0;
     long int bad_char_skip[256];
     long int last;
- 
+
     if (plen <= 0 || !string || !pattern)
         return NULL;
 
     for (scan = 0; scan <= 255; scan++)
         bad_char_skip[scan] = plen;
- 
+
     last = plen - 1;
- 
+
     for (scan = 0; scan < last; scan++)
         bad_char_skip[pattern[scan]] = last - scan;
- 
+
     while (slen >= plen)
     {
         for (scan = last; string[scan] == pattern[scan]; scan--)
@@ -39,7 +40,7 @@ unsigned char* memmem(unsigned char* string, long slen, const unsigned char* pat
         slen     -= bad_char_skip[string[last]];
         string   += bad_char_skip[string[last]];
     }
- 
+
     return NULL;
 }
 
@@ -47,7 +48,7 @@ int main(int argc, char* argv[])
 {
     FILE* file;                                                     /* file pointer to work with input and output file */
     unsigned char* buffer;                                          /* buffer to read input and output file into */
-    long int filesize;                                              /* size of opened file */                                              
+    long int filesize;                                              /* size of opened file */
     long int read;                                                  /* read bytes counter */
     unsigned char* ubf;                                             /* UBF signature */
     unsigned char* bootefi;                                         /* bootefi signature */
@@ -68,7 +69,7 @@ int main(int argc, char* argv[])
         printf("FD44Copier v0.2b\nThis program copies MAC address and FD44 block\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
         return ERR_ARGS;
     }
-    
+
     /* Open input file */
     file = fopen(argv[1], "rb");
     if (!file)
@@ -76,12 +77,12 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Can't open input file.\n");
         return ERR_INPUT_FILE;
     }
-     
+
     /* Determine file size */
     fseek(file, 0, SEEK_END);
     filesize = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
+
     /* Allocating memory for buffer */
     buffer = malloc(filesize);
     if (!buffer)
@@ -89,7 +90,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Can't allocate memory for input buffer.\n");
         return ERR_MEMORY;
     }
-    
+
     /* Read whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
@@ -98,14 +99,14 @@ int main(int argc, char* argv[])
         return ERR_INPUT_FILE;
     }
 
-    /* Search for bootefi signature */   
+    /* Search for bootefi signature */
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
         fprintf(stderr, "ASUS BIOS file signature not found in input file.\n");
         return ERR_INPUT_FILE;
     }
-    
+
     /* Store motherboard name */
     memcpy(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, sizeof(motherboardName));
 
@@ -128,7 +129,7 @@ int main(int argc, char* argv[])
 
         memcpy(gbeMac, gbe + GBE_MAC_OFFSET, GBE_MAC_LENGTH);
     }
-    
+
     /* Search for module header */
     fd44 = memmem(buffer, filesize, MODULE_HEADER, sizeof(MODULE_HEADER));
     if (!fd44)
@@ -136,7 +137,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Module not found in input file.\n");
         return ERR_MODULE_NOT_FOUND;
     }
-    
+
     /* Look for nonempty module */
     rest = filesize - (fd44 - buffer);
     isEmpty = 1;
@@ -150,11 +151,11 @@ int main(int argc, char* argv[])
             rest = filesize - (fd44 - buffer);
             continue;
         }
-        
+
         module = fd44 + MODULE_HEADER_LENGTH;
         for (pos = 0; pos < MODULE_LENGTH; pos++)
         {
-            if (*module != '\xFF')
+            if (*module != (unsigned char)'\xFF')
             {
                 isEmpty = 0;
                 break;
@@ -167,7 +168,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Module is empty in input file. Nothing to do.\n");
         return ERR_EMPTY_MODULE;
     }
-    
+
     /* Store module contents */
     memcpy(fd44Module, module, sizeof(fd44Module));
     free(buffer);
@@ -185,7 +186,7 @@ int main(int argc, char* argv[])
     fseek(file, 0, SEEK_END);
     filesize = ftell(file);
     fseek(file, 0, SEEK_SET);
-    
+
     /* Allocating memory for buffer */
     buffer = malloc(filesize);
     if (!buffer)
@@ -193,7 +194,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Can't allocate memory for output buffer.\n");
         return ERR_MEMORY;
     }
-    
+
     /* Read whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
@@ -212,7 +213,7 @@ int main(int argc, char* argv[])
         filesize -= UBF_FILE_HEADER_SIZE;
     }
 
-    /* Search for bootefi signature */  
+    /* Search for bootefi signature */
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
@@ -221,12 +222,12 @@ int main(int argc, char* argv[])
     }
 
     /* Checking motherboard name */
-    if (memcmp(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, strlen(motherboardName)))
+    if (memcmp(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, strlen((const char*)motherboardName)))
     {
         fprintf(stderr, "Motherboard name in output file is different from name in input file.\n");
         return ERR_DIFFERENT_BOARD;
     }
-    
+
     /* If input file had GbE block, search for it in output file and replace it */
     if (hasGbe)
     {
@@ -253,7 +254,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Module not found in output file.\n");
         return ERR_MODULE_NOT_FOUND;
     }
-    
+
     /* Replace all BSA_ modules */
     rest = filesize - (fd44 - buffer);
     while(fd44)
@@ -261,12 +262,12 @@ int main(int argc, char* argv[])
         if (!memcmp(fd44 + MODULE_HEADER_BSA_OFFSET, MODULE_HEADER_BSA, sizeof(MODULE_HEADER_BSA)))
         {
             module = fd44 + MODULE_HEADER_LENGTH;
-            memcpy(module, fd44Module, sizeof(fd44Module)); 
+            memcpy(module, fd44Module, sizeof(fd44Module));
         }
         fd44 = memmem(fd44 + 1, rest, MODULE_HEADER, sizeof(MODULE_HEADER));
         rest = filesize - (fd44 - buffer);
     }
-    
+
     /* Reopen file to resize it */
     fclose(file);
     file = fopen(argv[2], "wb");
@@ -278,7 +279,7 @@ int main(int argc, char* argv[])
         fprintf(stderr, "Can't write output file.\n");
         return ERR_OUTPUT_FILE;
     }
-    
+
     if (hasUbf)
         buffer -= UBF_FILE_HEADER_SIZE;
     free(buffer);
