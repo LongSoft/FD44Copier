@@ -89,7 +89,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("FD44Copier v0.3b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
+        printf("FD44Copier v0.3.1b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
         return ERR_ARGS;
     }
 
@@ -327,7 +327,7 @@ int main(int argc, char* argv[])
                         }
                         else
                         {
-                            memchr(pubkey_module, 0xFF, sizeof(slicPubkey));
+                            memset(pubkey_module, 0xFF, sizeof(slicPubkey));
                             fprintf(stderr, "Not enough free space to instert marker module.\nSLIC table can't be transfered.\n");
                         }
                     }
