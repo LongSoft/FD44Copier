@@ -20,7 +20,7 @@ unsigned char* memmem(unsigned char* string, size_t slen, const unsigned char* p
     size_t bad_char_skip[256];
     size_t last;
 
-    if (plen <= 0 || !string || !pattern)
+    if (plen == 0 || !string || !pattern)
         return NULL;
 
     for (scan = 0; scan <= 255; scan++)
@@ -51,7 +51,7 @@ unsigned char* find_free_space(unsigned char* begin, unsigned char* end, size_t 
     size_t free_bytes;
 
     free_bytes = 0;
-    for(pos = 0; pos < end - begin; pos++)
+    for(pos = 0; pos < (size_t)(end - begin); pos++)
     {
         if(*(begin+pos) == (unsigned char)'\xFF')
             free_bytes++;
@@ -94,7 +94,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("FD44Copier v0.4.0b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
+        printf("FD44Copier v0.4.1b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker from one BIOS image file to another\n\nUsage: FD44Copier INFILE OUTFILE\n");
         return ERR_ARGS;
     }
 
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
     file = fopen(argv[1], "rb");
     if (!file)
     {
-        fprintf(stderr, "Can't open input file.\n");
+        fprintf(stderr, "Can't open input file\n");
         return ERR_INPUT_FILE;
     }
 
@@ -115,7 +115,7 @@ int main(int argc, char* argv[])
     buffer = (unsigned char*)malloc(filesize);
     if (!buffer)
     {
-        fprintf(stderr, "Can't allocate memory for input buffer.\n");
+        fprintf(stderr, "Can't allocate memory for input buffer\n");
         return ERR_MEMORY;
     }
 
@@ -123,7 +123,7 @@ int main(int argc, char* argv[])
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
-        fprintf(stderr, "Can't read input file.\n");
+        fprintf(stderr, "Can't read input file\n");
         return ERR_INPUT_FILE;
     }
 
@@ -131,7 +131,7 @@ int main(int argc, char* argv[])
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
-        fprintf(stderr, "ASUS BIOS file signature not found in input file.\n");
+        fprintf(stderr, "ASUS BIOS file signature not found in input file\n");
         return ERR_INPUT_FILE;
     }
     
@@ -157,7 +157,7 @@ int main(int argc, char* argv[])
 
         if(!memcpy(gbeMac, gbe + GBE_MAC_OFFSET, GBE_MAC_LENGTH))
         {
-            fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied.\n");       
+            fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied\n");       
             return ERR_MEMORY;
         }
     }
@@ -173,12 +173,12 @@ int main(int argc, char* argv[])
             hasSLIC = 1;
             if(!memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey)))
             {
-                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
                 return ERR_MEMORY;
             }
             if(!memcpy(slicMarker, slic_marker, sizeof(slicMarker)))
             {
-                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
                 return ERR_MEMORY;
             }
         }
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
     fd44 = memmem(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
     if (!fd44)
     {
-        fprintf(stderr, "FD44 module not found in input file.\n");
+        fprintf(stderr, "FD44 module not found in input file\n");
         return ERR_MODULE_NOT_FOUND;
     }
 
@@ -222,7 +222,7 @@ int main(int argc, char* argv[])
 
     if (isEmpty)
     {
-        fprintf(stderr, "Fd44 module is empty in input file.\nNothing to do.\n");
+        fprintf(stderr, "Fd44 module is empty in input file\nNothing to do\n");
         return ERR_EMPTY_FD44_MODULE;
     }
 
@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
     file = fopen(argv[2], "r+b");
     if (!file)
     {
-        fprintf(stderr, "Can't open output file.\n");
+        fprintf(stderr, "Can't open output file\n");
         return ERR_OUTPUT_FILE;
     }
 
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
     buffer = (unsigned char*)malloc(filesize);
     if (!buffer)
     {
-        fprintf(stderr, "Can't allocate memory for output buffer.\n");
+        fprintf(stderr, "Can't allocate memory for output buffer\n");
         return ERR_MEMORY;
     }
 
@@ -256,7 +256,7 @@ int main(int argc, char* argv[])
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
-        fprintf(stderr, "Can't read output file.\n");
+        fprintf(stderr, "Can't read output file\n");
         return ERR_OUTPUT_FILE;
     }
 
@@ -268,21 +268,21 @@ int main(int argc, char* argv[])
         hasUbf = 1;
         buffer += UBF_FILE_HEADER_SIZE;
         filesize -= UBF_FILE_HEADER_SIZE;
-        printf("UBF header removed.\n");
+        printf("UBF header removed\n");
     }
 
     /* Search for bootefi signature */
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
-        fprintf(stderr, "ASUS BIOS file signature not found in output file.\n");
+        fprintf(stderr, "ASUS BIOS file signature not found in output file\n");
         return ERR_OUTPUT_FILE;
     }
 
     /* Checking motherboard name */
     if (memcmp(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, strlen((const char*)motherboardName)))
     {
-        fprintf(stderr, "Motherboard name in output file differs from name in input file.\n");
+        fprintf(stderr, "Motherboard name in output file differs from name in input file\n");
         return ERR_DIFFERENT_BOARD;
     }
 
@@ -293,12 +293,12 @@ int main(int argc, char* argv[])
         gbe = memmem(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
         if (!gbe)
         {
-            fprintf(stderr, "GbE region not found in output file.\nPlease use BIOS file from asus.com as output file.\n");
+            fprintf(stderr, "GbE region not found in output file\nPlease use BIOS file from asus.com as output file\n");
             return ERR_NO_GBE;
         }
         if(!memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac)))
         {
-            fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied.\n");       
+            fprintf(stderr, "Memcpy failed\nGbE MAC can't be copied\n");       
             return ERR_MEMORY;
         }
 
@@ -308,11 +308,11 @@ int main(int argc, char* argv[])
         if(gbe)
             if(!memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac)))
             {
-                fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied.\n");    
+                fprintf(stderr, "Memcpy failed\nGbE MAC can't be copied\n");    
                 return ERR_MEMORY;
             }
         
-        printf("GbE MAC address copied.\n");
+        printf("GbE MAC address copied\n");
     }
 
     /* Search for MSOA-containing module and add SLIC pubkey and marker if found */
@@ -328,44 +328,44 @@ int main(int argc, char* argv[])
             marker_module = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
             if(pubkey_module ||  marker_module)
             {
-                fprintf(stderr, "SLIC pubkey or marker is found in output file.\nSLIC table copy is not needed.\n");
+                fprintf(stderr, "SLIC pubkey or marker is found in output file\nSLIC table copy is not needed\n");
                 break;
             }
 
             msoa_module = memmem(buffer, filesize, MSOA_MODULE_HEADER, sizeof(MSOA_MODULE_HEADER));
             if(!msoa_module)
             {
-                fprintf(stderr, "MSOA module not found in output file.\nSLIC table can't be copied.\n");
+                fprintf(stderr, "MSOA module not found in output file\nSLIC table can't be copied\n");
                 break;
             }
 
             pubkey_module = find_free_space(msoa_module, buffer + filesize - 1, SLIC_FREE_SPACE_LENGTH);
             if(!pubkey_module)
             {
-                fprintf(stderr, "Not enough free space to insert pubkey module.\nSLIC table can't be copied.\n");       
+                fprintf(stderr, "Not enough free space to insert pubkey module\nSLIC table can't be copied\n");       
                 break;
             }
             
             if(!memcpy(pubkey_module, slicPubkey, sizeof(slicPubkey)))
             {
-                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
                 break;
             }
 
             marker_module = find_free_space(pubkey_module, buffer + filesize - 1, SLIC_MARKER_LENGTH + 8);
             if(!pubkey_module)
             {
-                fprintf(stderr, "Not enough free space to insert marker module.\nSLIC table can't be copied.\n");       
+                fprintf(stderr, "Not enough free space to insert marker module\nSLIC table can't be copied\n");       
                 break;
             }
             
             if(!memcpy(marker_module, slicMarker, sizeof(slicMarker)))
             {
-                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
                 break;
             }
             
-            printf("SLIC pubkey and marker copied.\n");
+            printf("SLIC pubkey and marker copied\n");
         } while (0);
     }
 
@@ -373,7 +373,7 @@ int main(int argc, char* argv[])
     fd44 = memmem(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
     if (!fd44)
     {
-        fprintf(stderr, "FD44 module not found in output file.\n");
+        fprintf(stderr, "FD44 module not found in output file\n");
         return ERR_MODULE_NOT_FOUND;
     }
 
@@ -386,14 +386,14 @@ int main(int argc, char* argv[])
             module = fd44 + FD44_MODULE_HEADER_LENGTH;
             if(!memcpy(module, fd44Module, sizeof(fd44Module)))
             {
-                fprintf(stderr, "Memcpy failed.\nFD44 module can't be copied.\n");       
+                fprintf(stderr, "Memcpy failed\nFD44 module can't be copied\n");       
                 return ERR_MEMORY;
             }
         }
         fd44 = memmem(fd44 + FD44_MODULE_LENGTH + FD44_MODULE_HEADER_LENGTH, rest, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         rest = filesize - (fd44 - buffer) - FD44_MODULE_HEADER_LENGTH - FD44_MODULE_LENGTH;
     }
-    printf("FD44 module copied.\n");
+    printf("FD44 module copied\n");
 
     /* Reopen file to resize it */
     fclose(file);
@@ -403,7 +403,7 @@ int main(int argc, char* argv[])
     read = fwrite(buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
-        fprintf(stderr, "Can't write output file.\n");
+        fprintf(stderr, "Can't write output file\n");
         return ERR_OUTPUT_FILE;
     }
 
