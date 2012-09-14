@@ -48,15 +48,20 @@ unsigned char* memmem(unsigned char* string, size_t slen, const unsigned char* p
 unsigned char* find_free_space(unsigned char* begin, unsigned char* end, size_t space_length)
 {
     size_t pos;
-    for(pos = end - begin - 1; pos > 0; pos--)
+    size_t free_bytes;
+
+    free_bytes = 0;
+    for(pos = 0; pos < end - begin; pos++)
     {
-        if(*(begin+pos) != (unsigned char)'\xFF')
+        if(*(begin+pos) == (unsigned char)'\xFF')
+            free_bytes++;
+        else
+            free_bytes = 0;
+        if(free_bytes == space_length)
         {
-            pos +=  8 - pos%8; /* allign to 8 */
-            if(end - begin - pos >= space_length)
-                return begin + pos;
-            else
-                return NULL;
+            pos -= free_bytes; /* back at the beginning of free space */
+            pos += 8 - pos%8; /* allign to 8 */
+            return begin + pos;
         }
     }
     return NULL;
@@ -89,7 +94,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3)
     {
-        printf("FD44Copier v0.3.1b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
+        printf("FD44Copier v0.4.0b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker\nfrom one BIOS image file to another.\n\nUsage: FD44Copier INFILE OUTFILE\n");
         return ERR_ARGS;
     }
 
@@ -150,7 +155,11 @@ int main(int argc, char* argv[])
                 gbe = gbe2;
         }
 
-        memcpy(gbeMac, gbe + GBE_MAC_OFFSET, GBE_MAC_LENGTH);
+        if(!memcpy(gbeMac, gbe + GBE_MAC_OFFSET, GBE_MAC_LENGTH))
+        {
+            fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied.\n");       
+            return ERR_MEMORY;
+        }
     }
 
     /* Search for SLIC headers and store pubkey and marker if found*/
@@ -162,8 +171,16 @@ int main(int argc, char* argv[])
         if(slic_marker)
         {
             hasSLIC = 1;
-            memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey));
-            memcpy(slicMarker, slic_marker, sizeof(slicMarker));
+            if(!memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey)))
+            {
+                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                return ERR_MEMORY;
+            }
+            if(!memcpy(slicMarker, slic_marker, sizeof(slicMarker)))
+            {
+                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                return ERR_MEMORY;
+            }
         }
     }
 
@@ -279,13 +296,21 @@ int main(int argc, char* argv[])
             fprintf(stderr, "GbE region not found in output file.\nPlease use BIOS file from asus.com as output file.\n");
             return ERR_NO_GBE;
         }
-        memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac));
+        if(!memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac)))
+        {
+            fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied.\n");       
+            return ERR_MEMORY;
+        }
 
         /* Second GbE block */
         rest = filesize - (gbe - buffer) - sizeof(GBE_HEADER);
         gbe = memmem(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
         if(gbe)
-            memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac));
+            if(!memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac)))
+            {
+                fprintf(stderr, "Memcpy failed.\nGbE MAC can't be copied.\n");    
+                return ERR_MEMORY;
+            }
         
         printf("GbE MAC address copied.\n");
     }
@@ -294,58 +319,54 @@ int main(int argc, char* argv[])
     if(hasSLIC)
     {
         unsigned char* msoa_module;
-        unsigned char* next_module;
         unsigned char* pubkey_module;
         unsigned char* marker_module;
 
-        pubkey_module = memmem(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
-        marker_module = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
-        if(!pubkey_module && !marker_module)
+        do
         {
+            pubkey_module = memmem(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
+            marker_module = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
+            if(pubkey_module ||  marker_module)
+            {
+                fprintf(stderr, "SLIC pubkey or marker is found in output file.\nSLIC table copy is not needed.\n");
+                break;
+            }
+
             msoa_module = memmem(buffer, filesize, MSOA_MODULE_HEADER, sizeof(MSOA_MODULE_HEADER));
-            if(msoa_module)
+            if(!msoa_module)
             {
-                rest = filesize - (msoa_module - buffer);
-                next_module = memmem(msoa_module, rest, BIOS_VOLUME_HEADER, sizeof(BIOS_VOLUME_HEADER));
-                if(!next_module)
-                {
-                    fprintf(stderr, "MSOA module is at the end of output file.\nSLIC table can't be transfered.\n");                       
-                }
-                else
-                {
-                    pubkey_module = find_free_space(msoa_module, next_module + BIOS_VOLUME_HEADER_OFFSET, SLIC_PUBKEY_LENGTH + SLIC_MARKER_LENGTH + 16);
-                
-                    if(pubkey_module)
-                    {
-                        memcpy(pubkey_module, slicPubkey, sizeof(slicPubkey));
-                    
-                        marker_module =  find_free_space(pubkey_module, next_module + BIOS_VOLUME_HEADER_OFFSET, SLIC_MARKER_LENGTH + 8);
-                        if(marker_module)
-                        {
-                            memcpy(marker_module, slicMarker, sizeof(slicMarker));
-                            printf("SLIC pubkey and marker copied.\n");
-                        }
-                        else
-                        {
-                            memset(pubkey_module, 0xFF, sizeof(slicPubkey));
-                            fprintf(stderr, "Not enough free space to instert marker module.\nSLIC table can't be transfered.\n");
-                        }
-                    }
-                    else
-                    {
-                        fprintf(stderr, "Not enough free space to instert pubkey module.\nSLIC table can't be transfered.\n");                       
-                    }
-                }
+                fprintf(stderr, "MSOA module not found in output file.\nSLIC table can't be copied.\n");
+                break;
             }
-            else
+
+            pubkey_module = find_free_space(msoa_module, buffer + filesize - 1, SLIC_FREE_SPACE_LENGTH);
+            if(!pubkey_module)
             {
-                fprintf(stderr, "MSOA module not found in output file.\nSLIC table can't be transfered.\n");
+                fprintf(stderr, "Not enough free space to insert pubkey module.\nSLIC table can't be copied.\n");       
+                break;
             }
-        }
-        else
-        {
-            fprintf(stderr, "SLIC pubkey or marker is found in output file.\nSLIC table transfer in not needed.\n");
-        }
+            
+            if(!memcpy(pubkey_module, slicPubkey, sizeof(slicPubkey)))
+            {
+                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                break;
+            }
+
+            marker_module = find_free_space(pubkey_module, buffer + filesize - 1, SLIC_MARKER_LENGTH + 8);
+            if(!pubkey_module)
+            {
+                fprintf(stderr, "Not enough free space to insert marker module.\nSLIC table can't be copied.\n");       
+                break;
+            }
+            
+            if(!memcpy(marker_module, slicMarker, sizeof(slicMarker)))
+            {
+                fprintf(stderr, "Memcpy failed.\nSLIC table can't be copied.\n");       
+                break;
+            }
+            
+            printf("SLIC pubkey and marker copied.\n");
+        } while (0);
     }
 
     /* Search for module header */
@@ -363,7 +384,11 @@ int main(int argc, char* argv[])
         if (!memcmp(fd44 + FD44_MODULE_HEADER_BSA_OFFSET, FD44_MODULE_HEADER_BSA, sizeof(FD44_MODULE_HEADER_BSA)))
         {
             module = fd44 + FD44_MODULE_HEADER_LENGTH;
-            memcpy(module, fd44Module, sizeof(fd44Module));
+            if(!memcpy(module, fd44Module, sizeof(fd44Module)))
+            {
+                fprintf(stderr, "Memcpy failed.\nFD44 module can't be copied.\n");       
+                return ERR_MEMORY;
+            }
         }
         fd44 = memmem(fd44 + FD44_MODULE_LENGTH + FD44_MODULE_HEADER_LENGTH, rest, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         rest = filesize - (fd44 - buffer) - FD44_MODULE_HEADER_LENGTH - FD44_MODULE_LENGTH;

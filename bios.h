@@ -28,11 +28,6 @@ static const unsigned char GBE_MAC_STUB[] =                     {'\x88','\x88','
                                                                  '\x88'};
 
 /* SLIC */
-static const unsigned char BIOS_VOLUME_HEADER[] =               {'\x78','\xE5','\x8C','\x8C','\x3D',
-                                                                 '\x8A','\x1C','\x4F','\x99','\x35',
-                                                                 '\x89','\x61','\x85','\xC3','\x2D',
-                                                                 '\xD3'}; 
-#define BIOS_VOLUME_HEADER_OFFSET (-16)
 static const unsigned char MSOA_MODULE_HEADER[] =               {'\xB9','\x2A','\x90','\xA1','\x94',
                                                                  '\x53','\xF2','\x45','\x85','\x7A',
                                                                  '\x12','\x82','\x42','\x13','\xEE',
@@ -43,12 +38,13 @@ static const unsigned char SLIC_PUBKEY_HEADER[] =               {'\xFB','\xEB','
                                                                  '\x59','\xB8','\x61','\x92','\x09',
                                                                  '\x13'};
 #define SLIC_PUBKEY_LENGTH 366
+#define SLIC_MARKER_OFFSET 2
 static const unsigned char SLIC_MARKER_HEADER[] =               {'\x58','\x44','\x63','\x15','\xA4',
                                                                  '\xE8','\x6D','\x43','\xAC','\x2F',
                                                                  '\x57','\xE3','\x3E','\x53','\x4C',
                                                                  '\xCF'};
 #define SLIC_MARKER_LENGTH 56
-
+#define SLIC_FREE_SPACE_LENGTH 3096
 
 /* FD44 */
 static const unsigned char FD44_MODULE_HEADER[] =               {'\x0B','\x82','\x44','\xFD','\xAB',
