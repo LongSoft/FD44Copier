@@ -69,36 +69,37 @@ unsigned char* find_free_space(unsigned char* begin, unsigned char* end, size_t 
 
 int main(int argc, char* argv[])
 {
-    FILE* file;                                                     /* file pointer to work with input and output file */
-    unsigned char* buffer;                                          /* buffer to read input and output file into */
-    size_t filesize;                                                /* size of opened file */
-    size_t read;                                                    /* read bytes counter */
-    unsigned char* ubf;                                             /* UBF signature */
-    unsigned char* bootefi;                                         /* bootefi signature */
-    unsigned char* gbe;                                             /* GbE header */
-    unsigned char* slic_pubkey;                                     /* SLIC pubkey header */
-    unsigned char* slic_marker;                                     /* SLIC marker header */
-    unsigned char* fd44;                                            /* module in search */
-    unsigned char* module;                                          /* found module */
-    size_t rest;                                                    /* size of the rest of buffer in search*/
-    char hasUbf;                                                    /* flag that output file has UBF header */
-    char hasGbe;                                                    /* flag that input file has GbE region */
-    char hasSLIC;                                                   /* flag that input file has SLIC pubkey and marker */
-    char isEmpty;                                                   /* flag that module in input file is empty */
+    FILE* file;                                                                 /* file pointer to work with input and output file */
+    unsigned char* buffer;                                                      /* buffer to read input and output file into */
+    size_t filesize;                                                            /* size of opened file */
+    size_t read;                                                                /* read bytes counter */
+    unsigned char* ubf;                                                         /* UBF signature */
+    unsigned char* bootefi;                                                     /* bootefi signature */
+    unsigned char* gbe;                                                         /* GbE header */
+    unsigned char* asusbkp;                                                     /* ASUSBKP header */
+    unsigned char* slic_pubkey;                                                 /* SLIC pubkey header */
+    unsigned char* slic_marker;                                                 /* SLIC marker header */
+    unsigned char* fd44;                                                        /* module in search */
+    unsigned char* module;                                                      /* found module */
+    size_t rest;                                                                /* size of the rest of buffer in search*/
+    char hasUbf;                                                                /* flag that output file has UBF header */
+    char hasGbe;                                                                /* flag that input file has GbE region */
+    char hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
+    char isEmpty;                                                               /* flag that FD44 module in input file is empty */
 
-    unsigned char motherboardName[BOOTEFI_MOTHERBOARD_NAME_LENGTH]; /* motherboard name storage */
-    unsigned char gbeMac[GBE_MAC_LENGTH];                           /* GbE MAC storage */
-    unsigned char slicPubkey[SLIC_PUBKEY_LENGTH];                   /* SLIC pubkey storage */
-    unsigned char slicMarker[SLIC_MARKER_LENGTH];                   /* SLIC marker storage */
-    unsigned char fd44Module[FD44_MODULE_LENGTH - FD44_MODULE_HEADER_LENGTH]; /* module storage */
+    unsigned char motherboardName[BOOTEFI_MOTHERBOARD_NAME_LENGTH];             /* motherboard name storage */
+    unsigned char gbeMac[GBE_MAC_LENGTH];                                       /* GbE MAC storage */
+    unsigned char slicPubkey[SLIC_PUBKEY_LENGTH - sizeof(SLIC_PUBKEY_HEADER)];  /* SLIC pubkey storage */
+    unsigned char slicMarker[SLIC_MARKER_LENGTH - sizeof(SLIC_MARKER_HEADER)];  /* SLIC marker storage */
+    unsigned char fd44Module[FD44_MODULE_LENGTH - FD44_MODULE_HEADER_LENGTH];   /* module storage */
 
     if(argc < 3)
     {
-        printf("FD44Copier v0.4.1b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker from one BIOS image file to another\n\nUsage: FD44Copier INFILE OUTFILE\n");
+        printf("FD44Copier v0.4.3b\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker from one BIOS image file to another\n\nUsage: FD44Copier INFILE OUTFILE\n");
         return ERR_ARGS;
     }
 
-     /* Open input file */
+     /* Opening input file */
     file = fopen(argv[1], "rb");
     if (!file)
     {
@@ -106,7 +107,7 @@ int main(int argc, char* argv[])
         return ERR_INPUT_FILE;
     }
 
-    /* Determine file size */
+    /* Determining file size */
     fseek(file, 0, SEEK_END);
     filesize = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -119,7 +120,7 @@ int main(int argc, char* argv[])
         return ERR_MEMORY;
     }
 
-    /* Read whole file to buffer */
+    /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
@@ -127,7 +128,7 @@ int main(int argc, char* argv[])
         return ERR_INPUT_FILE;
     }
 
-    /* Search for bootefi signature */
+    /* Searching for bootefi signature */
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
@@ -135,23 +136,23 @@ int main(int argc, char* argv[])
         return ERR_INPUT_FILE;
     }
     
-    /* Store motherboard name */
+    /* Storing motherboard name */
     memcpy(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, sizeof(motherboardName));
 
-    /* Search for GbE and store MAC if found */
+    /* Searching for GbE and storing MAC address if it is found */
     hasGbe = 0;
     gbe = memmem(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
-    if (gbe)
+    if(gbe)
     {
         hasGbe = 1;
-        /* Check if first GbE is a stub */
-        if (!memcmp(gbe + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
+        /* Checking if first GbE is a stub */
+        if(!memcmp(gbe + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
         {
             unsigned char* gbe2;
             rest = filesize - (gbe - buffer) - sizeof(GBE_HEADER);
             gbe2 = memmem(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
-            /* Check if second GbE is not a stub */
-            if (gbe2 && memcmp(gbe2 + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
+            /* Checking if second GbE is not a stub */
+            if(gbe2 && memcmp(gbe2 + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
                 gbe = gbe2;
         }
 
@@ -162,29 +163,54 @@ int main(int argc, char* argv[])
         }
     }
 
-    /* Search for SLIC headers and store pubkey and marker if found*/
+    /* Searching for SLIC pubkey and marker and storing them if they are found*/
     hasSLIC = 0;
     slic_pubkey = memmem(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
-    if(slic_pubkey)
+    slic_marker = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
+    if(slic_pubkey && slic_marker) 
     {
-        slic_marker = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
-        if(slic_marker)
+        slic_pubkey += sizeof(SLIC_PUBKEY_HEADER);
+        slic_marker += sizeof(SLIC_MARKER_HEADER);
+        if(!memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey)))
         {
-            hasSLIC = 1;
-            if(!memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey)))
+            fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
+            return ERR_MEMORY;
+        }
+        if(!memcpy(slicMarker, slic_marker, sizeof(slicMarker)))
+        {
+            fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
+            return ERR_MEMORY;
+        }
+        hasSLIC = 1;
+    }
+    else /* If SLIC headers not found, seaching for SLIC pubkey and marker in ASUSBKP module */
+    {
+        asusbkp = memmem(buffer, filesize, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
+        if(asusbkp)
+        {
+            rest = filesize - (asusbkp - buffer);
+            slic_pubkey = memmem(asusbkp, rest, ASUSBKP_PUBKEY_HEADER, sizeof(ASUSBKP_PUBKEY_HEADER));
+            slic_marker = memmem(asusbkp, rest, ASUSBKP_MARKER_HEADER, sizeof(ASUSBKP_MARKER_HEADER));
+            if(slic_pubkey && slic_marker)
             {
-                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
-                return ERR_MEMORY;
-            }
-            if(!memcpy(slicMarker, slic_marker, sizeof(slicMarker)))
-            {
-                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
-                return ERR_MEMORY;
+                slic_pubkey += sizeof(ASUSBKP_PUBKEY_HEADER);
+                slic_marker += sizeof(ASUSBKP_MARKER_HEADER);
+                if(!memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey)))
+                {
+                    fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
+                    return ERR_MEMORY;
+                }
+                if(!memcpy(slicMarker, slic_marker, sizeof(slicMarker)))
+                {
+                    fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
+                    return ERR_MEMORY;
+                }
+                hasSLIC = 1;
             }
         }
     }
 
-    /* Search for module header */
+    /* Searching for module header */
     fd44 = memmem(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
     if (!fd44)
     {
@@ -192,7 +218,7 @@ int main(int argc, char* argv[])
         return ERR_MODULE_NOT_FOUND;
     }
 
-    /* Look for nonempty module */
+    /* Looking for nonempty module */
     rest = filesize - (fd44 - buffer);
     isEmpty = 1;
     while(isEmpty && fd44)
@@ -226,12 +252,16 @@ int main(int argc, char* argv[])
         return ERR_EMPTY_FD44_MODULE;
     }
 
-    /* Store module contents */
-    memcpy(fd44Module, module, sizeof(fd44Module));
+    /* Storing module contents */
+    if(!memcpy(fd44Module, module, sizeof(fd44Module)))
+    {
+        fprintf(stderr, "Memcpy failed\nFD44 module can't be copied\n");       
+        return ERR_MEMORY;
+    }
     free(buffer);
     fclose(file);
 
-    /* Open output file */
+    /* Opening output file */
     file = fopen(argv[2], "r+b");
     if (!file)
     {
@@ -239,7 +269,7 @@ int main(int argc, char* argv[])
         return ERR_OUTPUT_FILE;
     }
 
-    /* Determine file size */
+    /* Determining file size */
     fseek(file, 0, SEEK_END);
     filesize = ftell(file);
     fseek(file, 0, SEEK_SET);
@@ -252,7 +282,7 @@ int main(int argc, char* argv[])
         return ERR_MEMORY;
     }
 
-    /* Read whole file to buffer */
+    /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
@@ -260,7 +290,7 @@ int main(int argc, char* argv[])
         return ERR_OUTPUT_FILE;
     }
 
-    /* Search for UBF signature, if found - remove UBF header */
+    /* Searching for UBF signature, if found - remove UBF header */
     hasUbf = 0;
     ubf = memmem(buffer, filesize, UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
     if (ubf)
@@ -271,7 +301,7 @@ int main(int argc, char* argv[])
         printf("UBF header removed\n");
     }
 
-    /* Search for bootefi signature */
+    /* Searching for bootefi signature */
     bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
@@ -286,7 +316,7 @@ int main(int argc, char* argv[])
         return ERR_DIFFERENT_BOARD;
     }
 
-    /* If input file had GbE block, search for it in output file and replace it */
+    /* If input file had GbE block, searching for it in output file and replacing it */
     if (hasGbe)
     {
         /* First GbE block */
@@ -315,7 +345,7 @@ int main(int argc, char* argv[])
         printf("GbE MAC address copied\n");
     }
 
-    /* Search for MSOA-containing module and add SLIC pubkey and marker if found */
+    /* Searching for MSOA-containing module and add SLIC pubkey and marker if found */
     if(hasSLIC)
     {
         unsigned char* msoa_module;
@@ -346,20 +376,34 @@ int main(int argc, char* argv[])
                 break;
             }
             
-            if(!memcpy(pubkey_module, slicPubkey, sizeof(slicPubkey)))
+            /* Writing pubkey header*/
+            if(!memcpy(pubkey_module, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER)))
+            {
+                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
+                break;
+            }
+            /* Writing pubkey*/ 
+             if(!memcpy(pubkey_module + sizeof(SLIC_PUBKEY_HEADER), slicPubkey, sizeof(slicPubkey)))
             {
                 fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
                 break;
             }
 
             marker_module = find_free_space(pubkey_module, buffer + filesize - 1, SLIC_MARKER_LENGTH + 8);
-            if(!pubkey_module)
+            if(!marker_module)
             {
                 fprintf(stderr, "Not enough free space to insert marker module\nSLIC table can't be copied\n");       
                 break;
             }
-            
-            if(!memcpy(marker_module, slicMarker, sizeof(slicMarker)))
+
+            /* Writing marker header*/
+            if(!memcpy(marker_module, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER)))
+            {
+                fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
+                break;
+            }
+            /* Writing marker */
+            if(!memcpy(marker_module + sizeof(SLIC_MARKER_HEADER), slicMarker, sizeof(slicMarker)))
             {
                 fprintf(stderr, "Memcpy failed\nSLIC table can't be copied\n");       
                 break;
@@ -369,7 +413,7 @@ int main(int argc, char* argv[])
         } while (0);
     }
 
-    /* Search for module header */
+    /* Searching for module header */
     fd44 = memmem(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
     if (!fd44)
     {
@@ -377,7 +421,7 @@ int main(int argc, char* argv[])
         return ERR_MODULE_NOT_FOUND;
     }
 
-    /* Replace all BSA_ modules */
+    /* Replacing all BSA_ modules */
     rest = filesize - (fd44 - buffer) - FD44_MODULE_HEADER_LENGTH - FD44_MODULE_LENGTH;
     while(fd44)
     {
@@ -395,11 +439,11 @@ int main(int argc, char* argv[])
     }
     printf("FD44 module copied\n");
 
-    /* Reopen file to resize it */
+    /* Reopening file to resize it */
     fclose(file);
     file = fopen(argv[2], "wb");
 
-    /* Write buffer to output file */
+    /* Writing buffer to output file */
     read = fwrite(buffer, sizeof(char), filesize, file);
     if (read != filesize)
     {
