@@ -34,16 +34,18 @@ const unsigned char MSOA_MODULE_HEADER[] =               {'\xB9','\x2A','\x90','
 const unsigned char SLIC_PUBKEY_HEADER[] =               {'\xFB','\xEB','\xFF','\xCD','\xDC',
                                                           '\x17','\xBC','\x46','\x9B','\x75',
                                                           '\x59','\xB8','\x61','\x92','\x09',
-                                                          '\x13','\x78','\x02','\x02','\x40',
-                                                          '\x6E','\x01','\x00','\xF8','\x56',
-                                                          '\x01','\x00','\x19'};
+                                                          '\x13'};
+const unsigned char SLIC_PUBKEY_PART1[] =                {'\x78','\x02','\x02','\x40','\x6E',
+                                                          '\x01','\x00','\xF8','\x56','\x01',
+                                                          '\x00','\x19'};
 #define SLIC_PUBKEY_LENGTH 366
 const unsigned char SLIC_MARKER_HEADER[] =               {'\x58','\x44','\x63','\x15','\xA4',
                                                           '\xE8','\x6D','\x43','\xAC','\x2F',
                                                           '\x57','\xE3','\x3E','\x53','\x4C',
-                                                          '\xCF','\x75','\x4E','\x02','\x40',
-                                                          '\x38','\x00','\x00','\xF8','\x20',
-                                                          '\x00','\x00','\x19'};
+                                                          '\xCF'};
+const unsigned char SLIC_MARKER_PART1[] =                {'\x75','\x4E','\x02','\x40','\x38',
+                                                          '\x00','\x00','\xF8','\x20','\x00',
+                                                          '\x00','\x19'};
 #define SLIC_MARKER_LENGTH 56
 #define SLIC_FREE_SPACE_LENGTH 3096
 
