@@ -1,0 +1,215 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		580B4E1A1621FB400059C3FC /* main.c in Sources */ = {isa = PBXBuildFile; fileRef = 580B4E191621FB400059C3FC /* main.c */; };
+		580B4E1C1621FB400059C3FC /* FD44Copier.1 in CopyFiles */ = {isa = PBXBuildFile; fileRef = 580B4E1B1621FB400059C3FC /* FD44Copier.1 */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		580B4E131621FB400059C3FC /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = /usr/share/man/man1/;
+			dstSubfolderSpec = 0;
+			files = (
+				580B4E1C1621FB400059C3FC /* FD44Copier.1 in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 1;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		580B4E151621FB400059C3FC /* FD44Copier */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = FD44Copier; sourceTree = BUILT_PRODUCTS_DIR; };
+		580B4E191621FB400059C3FC /* main.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = main.c; sourceTree = "<group>"; };
+		580B4E1B1621FB400059C3FC /* FD44Copier.1 */ = {isa = PBXFileReference; lastKnownFileType = text.man; path = FD44Copier.1; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		580B4E121621FB400059C3FC /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		580B4E0A1621FB400059C3FC = {
+			isa = PBXGroup;
+			children = (
+				580B4E181621FB400059C3FC /* FD44Copier */,
+				580B4E161621FB400059C3FC /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		580B4E161621FB400059C3FC /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				580B4E151621FB400059C3FC /* FD44Copier */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		580B4E181621FB400059C3FC /* FD44Copier */ = {
+			isa = PBXGroup;
+			children = (
+				580B4E191621FB400059C3FC /* main.c */,
+				580B4E1B1621FB400059C3FC /* FD44Copier.1 */,
+			);
+			path = FD44Copier;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		580B4E141621FB400059C3FC /* FD44Copier */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 580B4E1F1621FB400059C3FC /* Build configuration list for PBXNativeTarget "FD44Copier" */;
+			buildPhases = (
+				580B4E111621FB400059C3FC /* Sources */,
+				580B4E121621FB400059C3FC /* Frameworks */,
+				580B4E131621FB400059C3FC /* CopyFiles */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FD44Copier;
+			productName = FD44Copier;
+			productReference = 580B4E151621FB400059C3FC /* FD44Copier */;
+			productType = "com.apple.product-type.tool";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		580B4E0C1621FB400059C3FC /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastUpgradeCheck = 0450;
+				ORGANIZATIONNAME = "Nikolaj Schlej";
+			};
+			buildConfigurationList = 580B4E0F1621FB400059C3FC /* Build configuration list for PBXProject "FD44Copier" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 580B4E0A1621FB400059C3FC;
+			productRefGroup = 580B4E161621FB400059C3FC /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				580B4E141621FB400059C3FC /* FD44Copier */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		580B4E111621FB400059C3FC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				580B4E1A1621FB400059C3FC /* main.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		580B4E1D1621FB400059C3FC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_SYMBOLS_PRIVATE_EXTERN = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		580B4E1E1621FB400059C3FC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = YES;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.8;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		580B4E201621FB400059C3FC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		580B4E211621FB400059C3FC /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		580B4E0F1621FB400059C3FC /* Build configuration list for PBXProject "FD44Copier" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				580B4E1D1621FB400059C3FC /* Debug */,
+				580B4E1E1621FB400059C3FC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		580B4E1F1621FB400059C3FC /* Build configuration list for PBXNativeTarget "FD44Copier" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				580B4E201621FB400059C3FC /* Debug */,
+				580B4E211621FB400059C3FC /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 580B4E0C1621FB400059C3FC /* Project object */;
+}
