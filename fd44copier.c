@@ -14,8 +14,8 @@
 #define ERR_NO_GBE                  8
 #define ERR_NO_SLIC                 9
 
-/* memmem - implementation of GNU memmem function using Boyer-Moore-Horspool algorithm */
-unsigned char* memmem(unsigned char* string, size_t slen, const unsigned char* pattern, size_t plen)
+/* findpattern - implementation of GNU memmem function using Boyer-Moore-Horspool algorithm */
+unsigned char* findpattern(unsigned char* string, size_t slen, const unsigned char* pattern, size_t plen)
 {
     size_t scan = 0;
     size_t bad_char_skip[256];
@@ -45,8 +45,8 @@ unsigned char* memmem(unsigned char* string, size_t slen, const unsigned char* p
     return NULL;
 }
 
-/* find_free_space - finds free space between begin and end to insert new module. Returns alligned pointer to empty space or NULL if it can't be found. */
-unsigned char* find_free_space(unsigned char* begin, unsigned char* end, size_t space_length)
+/* findfreespace - finds free space between begin and end to insert new module. Returns alligned pointer to empty space or NULL if it can't be found. */
+unsigned char* findfreespace(unsigned char* begin, unsigned char* end, size_t space_length)
 {
     size_t pos;
     size_t free_bytes;
@@ -102,7 +102,7 @@ int main(int argc, char* argv[])
 
     if(argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.5.1\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker from one BIOS image file to another\n\n"
+        printf("FD44Copier v0.5.2\nThis program copies GbE MAC address, FD44 module, SLIC pubkey and marker from one BIOS image file to another\n\n"
             "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
             "Options: m - copy module data\n"
             "         g - copy GbE MAC address\n"
@@ -123,13 +123,13 @@ int main(int argc, char* argv[])
     if(argv[1][0] == '-')
     {
         size_t optlen = strlen(argv[1]);
-        if(!memmem((unsigned char*)argv[1], optlen, "m", 1))
+        if(!findpattern((unsigned char*)argv[1], optlen, "m", 1))
             copyModule = 0;
-        if(!memmem((unsigned char*)argv[1], optlen, "g", 1))
+        if(!findpattern((unsigned char*)argv[1], optlen, "g", 1))
             copyGbe = 0;
-        if(!memmem((unsigned char*)argv[1], optlen, "s", 1))
+        if(!findpattern((unsigned char*)argv[1], optlen, "s", 1))
             copySLIC = 0;
-        if(memmem((unsigned char*)argv[1], optlen, "n", 1))
+        if(findpattern((unsigned char*)argv[1], optlen, "n", 1))
             skipMotherboardNameCheck = 1;
         inputfile = argv[2];
         outputfile = argv[3];
@@ -171,7 +171,7 @@ int main(int argc, char* argv[])
     }
 
     /* Searching for bootefi signature */
-    bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
+    bootefi = findpattern(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
         fprintf(stderr, "ASUS BIOS file signature not found in input file\n");
@@ -186,7 +186,7 @@ int main(int argc, char* argv[])
     if(copyGbe)
     {
         hasGbe = 0;
-        gbe = memmem(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
+        gbe = findpattern(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
         if(gbe)
         {
             hasGbe = 1;
@@ -195,7 +195,7 @@ int main(int argc, char* argv[])
             {
                 unsigned char* gbe2;
                 rest = filesize - (gbe - buffer) - sizeof(GBE_HEADER);
-                gbe2 = memmem(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
+                gbe2 = findpattern(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
                 /* Checking if second GbE is not a stub */
                 if(gbe2 && memcmp(gbe2 + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
                     gbe = gbe2;
@@ -219,8 +219,8 @@ int main(int argc, char* argv[])
     if(copySLIC)
     {
         hasSLIC = 0;
-        slic_pubkey = memmem(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
-        slic_marker = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
+        slic_pubkey = findpattern(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
+        slic_marker = findpattern(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
         if(slic_pubkey && slic_marker) 
         {
             slic_pubkey += sizeof(SLIC_PUBKEY_HEADER) + sizeof(SLIC_PUBKEY_PART1);
@@ -239,12 +239,12 @@ int main(int argc, char* argv[])
         }
         else /* If SLIC headers not found, seaching for SLIC pubkey and marker in ASUSBKP module */
         {
-            asusbkp = memmem(buffer, filesize, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
+            asusbkp = findpattern(buffer, filesize, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
             if(asusbkp)
             {
                 rest = filesize - (asusbkp - buffer);
-                slic_pubkey = memmem(asusbkp, rest, ASUSBKP_PUBKEY_HEADER, sizeof(ASUSBKP_PUBKEY_HEADER));
-                slic_marker = memmem(asusbkp, rest, ASUSBKP_MARKER_HEADER, sizeof(ASUSBKP_MARKER_HEADER));
+                slic_pubkey = findpattern(asusbkp, rest, ASUSBKP_PUBKEY_HEADER, sizeof(ASUSBKP_PUBKEY_HEADER));
+                slic_marker = findpattern(asusbkp, rest, ASUSBKP_MARKER_HEADER, sizeof(ASUSBKP_MARKER_HEADER));
                 if(slic_pubkey && slic_marker)
                 {
                     slic_pubkey += sizeof(ASUSBKP_PUBKEY_HEADER);
@@ -274,7 +274,7 @@ int main(int argc, char* argv[])
     /* Searching for module header */
     if(copyModule)
     {
-        fd44 = memmem(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        fd44 = findpattern(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         if (!fd44)
         {
             fprintf(stderr, "FD44 module not found in input file\n");
@@ -300,7 +300,7 @@ int main(int argc, char* argv[])
                 }
             }
 
-            fd44 = memmem(fd44 + FD44_MODULE_HEADER_LENGTH, rest, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+            fd44 = findpattern(fd44 + FD44_MODULE_HEADER_LENGTH, rest, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
             rest = filesize - (fd44 - buffer);
         }
 
@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
 
     /* Searching for UBF signature, if found - remove UBF header */
     hasUbf = 0;
-    ubf = memmem(buffer, filesize, UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
+    ubf = findpattern(buffer, filesize, UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
     if (ubf)
     {
         hasUbf = 1;
@@ -363,7 +363,7 @@ int main(int argc, char* argv[])
     }
 
     /* Searching for bootefi signature */
-    bootefi = memmem(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
+    bootefi = findpattern(buffer, filesize, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
     {
         fprintf(stderr, "ASUS BIOS file signature not found in output file\n");
@@ -381,7 +381,7 @@ int main(int argc, char* argv[])
     if (copyGbe && hasGbe)
     {
         /* First GbE block */
-        gbe = memmem(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
+        gbe = findpattern(buffer, filesize, GBE_HEADER, sizeof(GBE_HEADER));
         if (!gbe)
         {
             fprintf(stderr, "GbE region not found in output file\nPlease use BIOS file from asus.com as output file\n");
@@ -395,7 +395,7 @@ int main(int argc, char* argv[])
 
         /* Second GbE block */
         rest = filesize - (gbe - buffer) - sizeof(GBE_HEADER);
-        gbe = memmem(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
+        gbe = findpattern(gbe + sizeof(GBE_HEADER), rest, GBE_HEADER, sizeof(GBE_HEADER));
         
         if(gbe && !memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac)))
         {
@@ -415,22 +415,22 @@ int main(int argc, char* argv[])
 
         do
         {
-            pubkey_module = memmem(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
-            marker_module = memmem(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
+            pubkey_module = findpattern(buffer, filesize, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
+            marker_module = findpattern(buffer, filesize, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
             if(pubkey_module ||  marker_module)
             {
                 fprintf(stderr, "SLIC pubkey or marker found in output file\nSLIC table copy is not needed\n");
                 break;
             }
 
-            msoa_module = memmem(buffer, filesize, MSOA_MODULE_HEADER, sizeof(MSOA_MODULE_HEADER));
+            msoa_module = findpattern(buffer, filesize, MSOA_MODULE_HEADER, sizeof(MSOA_MODULE_HEADER));
             if(!msoa_module)
             {
                 fprintf(stderr, "MSOA module not found in output file\nSLIC table can't be copied\n");
                 break;
             }
 
-            pubkey_module = find_free_space(msoa_module, buffer + filesize - 1, SLIC_FREE_SPACE_LENGTH);
+            pubkey_module = findfreespace(msoa_module, buffer + filesize - 1, SLIC_FREE_SPACE_LENGTH);
             if(!pubkey_module)
             {
                 fprintf(stderr, "Not enough free space to insert pubkey module\nSLIC table can't be copied\n");       
@@ -456,7 +456,7 @@ int main(int argc, char* argv[])
                 return ERR_MEMORY;
             }
 
-            marker_module = find_free_space(pubkey_module, buffer + filesize - 1, SLIC_MARKER_LENGTH + 8);
+            marker_module = findfreespace(pubkey_module, buffer + filesize - 1, SLIC_MARKER_LENGTH + 8);
             if(!marker_module)
             {
                 fprintf(stderr, "Not enough free space to insert marker module\nSLIC table can't be copied\n");       
@@ -489,7 +489,7 @@ int main(int argc, char* argv[])
     /* Searching for module header */
     if(copyModule)
     {
-        fd44 = memmem(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        fd44 = findpattern(buffer, filesize, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         if (!fd44)
         {
             fprintf(stderr, "FD44 module not found in output file\n");
@@ -509,7 +509,7 @@ int main(int argc, char* argv[])
                     return ERR_MEMORY;
                 }
             }
-            fd44 = memmem(fd44 + FD44_MODULE_LENGTH + FD44_MODULE_HEADER_LENGTH, rest, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+            fd44 = findpattern(fd44 + FD44_MODULE_LENGTH + FD44_MODULE_HEADER_LENGTH, rest, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
             rest = filesize - (fd44 - buffer) - FD44_MODULE_HEADER_LENGTH - FD44_MODULE_LENGTH;
         }
         printf("FD44 module copied\n");
