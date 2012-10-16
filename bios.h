@@ -1,14 +1,14 @@
 #ifndef BIOS_H
 #define BIOS_H
 
-/* USB BIOS Flashback file header */
+/* USB BIOS Flashback */
 const unsigned char UBF_FILE_HEADER[] =                  {'\x8B','\xA6','\x3C','\x4A','\x23',
                                                           '\x77','\xFB','\x48','\x80','\x3D',
                                                           '\x57','\x8C','\xC1','\xFE','\xC4',
                                                           '\x4D'};
 #define UBF_FILE_HEADER_SIZE 0x800
 
-/* BOOTEFI marker */
+/* BOOTEFI */
 const unsigned char BOOTEFI_HEADER[] =                   {'$','B','O','O','T','E','F','I','$'};
 #define BOOTEFI_MOTHERBOARD_NAME_OFFSET 14
 #define BOOTEFI_MOTHERBOARD_NAME_LENGTH 60
@@ -48,6 +48,8 @@ const unsigned char SLIC_MARKER_PART1[] =                {'\x75','\x4E','\x02','
                                                           '\x00','\x19'};
 #define SLIC_MARKER_LENGTH 56
 #define SLIC_FREE_SPACE_LENGTH 3096
+#define MODULE_DATA_CHECKSUM_OFFSET 17
+#define MODULE_DATA_CHECKSUM_START  24
 
 /* FD44 */
 const unsigned char FD44_MODULE_HEADER[] =               {'\x0B','\x82','\x44','\xFD','\xAB',
@@ -57,12 +59,11 @@ const unsigned char FD44_MODULE_HEADER[] =               {'\x0B','\x82','\x44','
 #define FD44_MODULE_HEADER_BSA_OFFSET 28
 const unsigned char FD44_MODULE_HEADER_BSA[] =           {'B', 'S', 'A', '_'};
 #define FD44_MODULE_HEADER_LENGTH 36
-
-#define FD44_MODULE_LENGTH 552
+#define FD44_MODULE_SIZE_OFFSET 20
 
 /* ASUSBKP */
-const unsigned char ASUSBKP_HEADER[] =                  {'A','S','U','S','B','K','P','$'};
-const unsigned char ASUSBKP_PUBKEY_HEADER[] =           {'S','2','L','P','R','\x01','\x00','\x00'};
-const unsigned char ASUSBKP_MARKER_HEADER[] =           {'K','E','Y','S','\x1C','\x00','\x00','\x00'};
+const unsigned char ASUSBKP_HEADER[] =                   {'A','S','U','S','B','K','P','$'};
+const unsigned char ASUSBKP_PUBKEY_HEADER[] =            {'S','2','L','P','R','\x01','\x00','\x00'};
+const unsigned char ASUSBKP_MARKER_HEADER[] =            {'K','E','Y','S','\x1C','\x00','\x00','\x00'};
 
 #endif /* BIOS_H */
