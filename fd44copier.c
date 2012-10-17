@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.0\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.1\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 
         if (!defaultOptions && !hasGbe)
         {
-            printf("GbE region not found in input file, but required by -g option.\nNothing to do.\n");
+            printf("GbE region not found in input file, but required by -g option.\n");
             return ERR_NO_GBE;
         }
     }
@@ -269,12 +269,12 @@ int main(int argc, char* argv[])
             slic_marker += sizeof(SLIC_MARKER_HEADER) + sizeof(SLIC_MARKER_PART1);
             if (!memcpy(slicPubkey, slic_pubkey, sizeof(slicPubkey)))
             {
-                printf("Memcpy failed\nSLIC pubkey can't be copied.\n");
+                printf("Memcpy failed.\nSLIC pubkey can't be copied.\n");
                 return ERR_MEMORY;
             }
             if (!memcpy(slicMarker, slic_marker, sizeof(slicMarker)))
             {
-                printf("Memcpy failed\nSLIC marker can't be copied.\n");
+                printf("Memcpy failed.\nSLIC marker can't be copied.\n");
                 return ERR_MEMORY;
             }
             hasSLIC = 1;
@@ -307,7 +307,7 @@ int main(int argc, char* argv[])
 
         if (!defaultOptions && !hasSLIC)
         {
-            printf("SLIC pubkey and marker not found in input file, but required by -s option.\nNothing to do.\n");
+            printf("SLIC pubkey and marker not found in input file, but required by -s option.\n");
             return ERR_NO_SLIC;
         }
     }
@@ -353,7 +353,7 @@ int main(int argc, char* argv[])
         /* Checking that all modules are empty */
         if (isEmpty)
         {
-            printf("FD44 modules are empty in input file.\nNothing to do.\n");
+            printf("FD44 modules are empty in input file.\n");
             return ERR_EMPTY_FD44_MODULE;
         }
                 
@@ -361,13 +361,15 @@ int main(int argc, char* argv[])
         fd44ModuleSize -= FD44_MODULE_HEADER_LENGTH;
         
         /* No need to store FF bytes */
-        while (module[--fd44ModuleSize] == 0xFF);
+        while (module[--fd44ModuleSize] == 0xFF)
+            ;
+        fd44ModuleSize++;
 
         /* Allocating memory for module storage */
         fd44Module = (unsigned char*)malloc(fd44ModuleSize);
         if (!fd44Module)
         {
-            printf("Can't allocate mamery for FD44 module.\nFD44 module can't be copied.\n");
+            printf("Can't allocate memory for FD44 module.\nFD44 module can't be copied.\n");
             return ERR_MEMORY;
         }
 
@@ -403,8 +405,7 @@ int main(int argc, char* argv[])
         printf("Can't allocate memory for output file.\n");
         return ERR_MEMORY;
     }
-    end = buffer + filesize - 1;
-
+    
     /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
@@ -412,17 +413,18 @@ int main(int argc, char* argv[])
         perror("Can't read output file.\n");
         return ERR_OUTPUT_FILE;
     }
+    end = buffer + filesize - 1;
 
     /* Searching for UBF signature, if found - remove UBF header */
     hasUbf = 0;
-    ubf = find_pattern(buffer, end, UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
+    ubf = find_pattern(buffer, buffer + sizeof(UBF_FILE_HEADER), UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
     if (ubf)
     {
         hasUbf = 1;
         buffer += UBF_FILE_HEADER_SIZE;
         filesize -= UBF_FILE_HEADER_SIZE;
     }
-
+    
     /* Searching for bootefi signature */
     bootefi = find_pattern(buffer, end, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
@@ -434,7 +436,7 @@ int main(int argc, char* argv[])
     /* Checking motherboard name */
     if (!skipMotherboardNameCheck && memcmp(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, strlen((const char*)motherboardName)))
     {
-        printf("Motherboard name in output file differs from motherboard name in input file.\nNothing to do.\n");
+        printf("Motherboard name in output file differs from motherboard name in input file.\n");
         return ERR_DIFFERENT_BOARD;
     }
 
@@ -445,7 +447,7 @@ int main(int argc, char* argv[])
         gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
         if (!gbe)
         {
-            printf("GbE region not found in output file.\nNothing to do.\n");
+            printf("GbE region not found in output file.\n");
             return ERR_NO_GBE;
         }
         if (!memcpy(gbe + GBE_MAC_OFFSET, gbeMac, sizeof(gbeMac)))
@@ -612,7 +614,7 @@ int main(int argc, char* argv[])
             printf("FD44 module copied.\n");
         else
         {
-            printf("FD44 module can't be copied.\nNothing to do.\n");
+            printf("FD44 module can't be copied.\n");
             return ERR_NO_FD44_MODULE;
         }
 
