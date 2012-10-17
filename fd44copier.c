@@ -143,7 +143,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.1.1\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.2\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -163,7 +163,7 @@ int main(int argc, char* argv[])
         copyGbe =    (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"g", 1) != NULL);
         copySLIC =   (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"s", 1) != NULL);
         skipMotherboardNameCheck =
-                     (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"n", 1) == NULL);
+                     (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"n", 1) != NULL);
         defaultOptions = 0;
         inputfile = argv[2];
         outputfile = argv[3];
