@@ -17,12 +17,12 @@
 
 /* Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm
 *  Returns pointer to the beginning of found pattern of NULL if not found */
-unsigned char* find_pattern(unsigned char* begin, unsigned char* end, const unsigned char* pattern, size_t plen)
+unsigned char* find_pattern(unsigned char* begin, unsigned char* end, const unsigned char* pattern, unsigned int plen)
 {
-    size_t scan = 0;
-    size_t bad_char_skip[256];
-    size_t last;
-    size_t slen;
+    unsigned int scan = 0;
+    unsigned int bad_char_skip[256];
+    unsigned int last;
+    unsigned int slen;
 
     if (plen == 0 || !begin || !pattern || !end || end <= begin)
         return NULL;
@@ -52,13 +52,13 @@ unsigned char* find_pattern(unsigned char* begin, unsigned char* end, const unsi
 
 /* Finds free space between begin and end to insert new module.
  * Returns alligned pointer to empty space or NULL if it can't be found. */
-unsigned char* find_free_space(unsigned char* begin, unsigned char* end, size_t space_length)
+unsigned char* find_free_space(unsigned char* begin, unsigned char* end, unsigned int space_length)
 {
-    size_t pos;
-    size_t free_bytes;
-
+    unsigned int pos;
+    unsigned int free_bytes;
+    unsigned int size = end - begin;
     free_bytes = 0;
-    for (pos = 0; pos < (size_t)(end - begin); pos++)
+    for (pos = 0; pos < size; pos++)
     {
         if (*(begin+pos) == 0xFF)
             free_bytes++;
@@ -110,25 +110,19 @@ int main(int argc, char* argv[])
     char* outputfile;                                                           /* path to output file */
     unsigned char* buffer;                                                      /* buffer to read input and output file */
     unsigned char* end;                                                         /* pointer to the end of buffer */
-    size_t filesize;                                                            /* size of opened file */
-    size_t read;                                                                /* read bytes counter */
-    unsigned char* ubf;                                                         /* UBF signature */
-    unsigned char* bootefi;                                                     /* bootefi signature */
-    unsigned char* gbe;                                                         /* GbE header */
-    unsigned char* asusbkp;                                                     /* ASUSBKP header */
-    unsigned char* slic_pubkey;                                                 /* SLIC pubkey header */
-    unsigned char* slic_marker;                                                 /* SLIC marker header */
-    unsigned char* fd44;                                                        /* module in search */
-    unsigned char* module;                                                      /* found module */
+    unsigned int filesize;                                                      /* size of opened file */
+    unsigned int read;                                                          /* read bytes counter */
+    unsigned char* bootefi;                                                     /* BOOTEFI header */
+    unsigned char* ubf;                                                         /* UBF header */
+
     char hasUbf;                                                                /* flag that output file has UBF header */
     char hasGbe;                                                                /* flag that input file has GbE region */
     char hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
     char defaultOptions;                                                        /* flag that program is runned with default options */
-    char copyModule;                                                            /* flag that module copying is requested */
+    char copyModule;                                                            /* flag that FD44 module copying is requested */
     char copyGbe;                                                               /* flag that GbE MAC copying is requested */
     char copySLIC;                                                              /* flag that SLIC copying is requested */
     char skipMotherboardNameCheck;                                              /* flag that motherboard name in output file doesn't need to be checked */
-    char isEmpty;                                                               /* flag that FD44 module in input file is empty */
     unsigned char motherboardName[BOOTEFI_MOTHERBOARD_NAME_LENGTH];             /* motherboard name storage */
     unsigned char gbeMac[GBE_MAC_LENGTH];                                       /* GbE MAC storage */
     unsigned char slicPubkey[SLIC_PUBKEY_LENGTH                                 /* SLIC----*/
@@ -143,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.2\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.3\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -157,13 +151,15 @@ int main(int argc, char* argv[])
     /* Checking for options presence and setting options */
     if (argv[1][0] == '-')
     {
+        unsigned char* options_begin = (unsigned char*)argv[1];
+        unsigned char* options_end = (unsigned char*)(argv[1] + strlen(argv[1]));
+
         /* Setting supplied options */
-        size_t optlen = strlen(argv[1]);
-        copyModule = (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"m", 1) != NULL);
-        copyGbe =    (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"g", 1) != NULL);
-        copySLIC =   (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"s", 1) != NULL);
+        copyModule = (find_pattern(options_begin, options_end,(unsigned char*)"m", 1) != NULL);
+        copyGbe =    (find_pattern(options_begin, options_end,(unsigned char*)"g", 1) != NULL);
+        copySLIC =   (find_pattern(options_begin, options_end,(unsigned char*)"s", 1) != NULL);
         skipMotherboardNameCheck =
-                     (find_pattern((unsigned char*)argv[1], (unsigned char*)(argv[1]+optlen), (unsigned char*)"n", 1) != NULL);
+                     (find_pattern(options_begin, options_end,(unsigned char*)"n", 1) != NULL);
         defaultOptions = 0;
         inputfile = argv[2];
         outputfile = argv[3];
@@ -200,7 +196,7 @@ int main(int argc, char* argv[])
         printf("Can't allocate memory for input file.\n");
         return ERR_MEMORY;
     }
-    end = buffer + filesize - 1;
+    end = buffer + filesize;
 
     /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
@@ -228,8 +224,8 @@ int main(int argc, char* argv[])
     /* Searching for GbE and storing MAC address if it is found */
     if (copyGbe)
     {
+        unsigned char* gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
         hasGbe = 0;
-        gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
         if (gbe)
         {
             hasGbe = 1;
@@ -260,10 +256,10 @@ int main(int argc, char* argv[])
     /* Searching for SLIC pubkey and marker and storing them if found*/
     if (copySLIC)
     {
+        unsigned char* slic_pubkey = find_pattern(buffer, end, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
+        unsigned char* slic_marker = find_pattern(buffer, end, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
         hasSLIC = 0;
-        slic_pubkey = find_pattern(buffer, end, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
-        slic_marker = find_pattern(buffer, end, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
-        if (slic_pubkey && slic_marker) 
+        if (slic_pubkey && slic_marker)
         {
             slic_pubkey += sizeof(SLIC_PUBKEY_HEADER) + sizeof(SLIC_PUBKEY_PART1);
             slic_marker += sizeof(SLIC_MARKER_HEADER) + sizeof(SLIC_MARKER_PART1);
@@ -281,7 +277,7 @@ int main(int argc, char* argv[])
         }
         else /* If SLIC headers not found, seaching for SLIC pubkey and marker in ASUSBKP module */
         {
-            asusbkp = find_pattern(buffer, end, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
+            unsigned char* asusbkp = find_pattern(buffer, end, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
             if (asusbkp)
             {
                 slic_pubkey = find_pattern(asusbkp, end, ASUSBKP_PUBKEY_HEADER, sizeof(ASUSBKP_PUBKEY_HEADER));
@@ -315,7 +311,9 @@ int main(int argc, char* argv[])
     /* Searching for FD44 module header */
     if (copyModule)
     {
-        fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        char isEmpty = 1;
+        unsigned char* module;
+        unsigned char* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         if (!fd44)
         {
             printf("FD44 module not found in input file.\n");
@@ -323,9 +321,9 @@ int main(int argc, char* argv[])
         }
 
         /* Looking for non-empty module */
-        isEmpty = 1;
         while(isEmpty && fd44)
         {
+
             /* Getting module size */
             size2int(fd44 + FD44_MODULE_SIZE_OFFSET, &fd44ModuleSize);
             
@@ -405,7 +403,8 @@ int main(int argc, char* argv[])
         printf("Can't allocate memory for output file.\n");
         return ERR_MEMORY;
     }
-    
+    end = buffer + filesize;
+
     /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
@@ -413,7 +412,6 @@ int main(int argc, char* argv[])
         perror("Can't read output file.\n");
         return ERR_OUTPUT_FILE;
     }
-    end = buffer + filesize - 1;
 
     /* Searching for UBF signature, if found - remove UBF header */
     hasUbf = 0;
@@ -444,7 +442,7 @@ int main(int argc, char* argv[])
     if (copyGbe && hasGbe)
     {
         /* First GbE block */
-        gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
+        unsigned char* gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
         if (!gbe)
         {
             printf("GbE region not found in output file.\n");
@@ -573,8 +571,8 @@ int main(int argc, char* argv[])
     {
         char isCopied;
         unsigned int currentModuleSize;
-        
-        fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        unsigned char* module;
+        unsigned char* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         if (!fd44)
         {
             printf("FD44 module not found in output file.\n");
