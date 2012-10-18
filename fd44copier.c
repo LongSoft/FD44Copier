@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.4\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.5\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -400,7 +400,7 @@ int main(int argc, char* argv[])
         printf("Can't allocate memory for output file.\n");
         return ERR_MEMORY;
     }
-    end = buffer + filesize;
+    
 
     /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
@@ -419,7 +419,8 @@ int main(int argc, char* argv[])
         buffer += UBF_FILE_HEADER_SIZE;
         filesize -= UBF_FILE_HEADER_SIZE;
     }
-    
+    end = buffer + filesize;
+
     /* Searching for bootefi signature */
     bootefi = find_pattern(buffer, end, BOOTEFI_HEADER, sizeof(BOOTEFI_HEADER));
     if (!bootefi)
@@ -634,7 +635,8 @@ int main(int argc, char* argv[])
         buffer -= UBF_FILE_HEADER_SIZE;
     }
     free(buffer);
-    free(fd44Module);
+    if (copyModule)
+        free(fd44Module);
     fclose(file);
 
     return ERR_OK;
