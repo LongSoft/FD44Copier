@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.3\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.4\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -151,15 +151,12 @@ int main(int argc, char* argv[])
     /* Checking for options presence and setting options */
     if (argv[1][0] == '-')
     {
-        unsigned char* options_begin = (unsigned char*)argv[1];
-        unsigned char* options_end = (unsigned char*)(argv[1] + strlen(argv[1]));
-
         /* Setting supplied options */
-        copyModule = (find_pattern(options_begin, options_end,(unsigned char*)"m", 1) != NULL);
-        copyGbe =    (find_pattern(options_begin, options_end,(unsigned char*)"g", 1) != NULL);
-        copySLIC =   (find_pattern(options_begin, options_end,(unsigned char*)"s", 1) != NULL);
+        copyModule = (strchr(argv[1], 'm') != NULL);
+        copyGbe =    (strchr(argv[1], 'g') != NULL);
+        copySLIC =   (strchr(argv[1], 's') != NULL);
         skipMotherboardNameCheck =
-                     (find_pattern(options_begin, options_end,(unsigned char*)"n", 1) != NULL);
+                     (strchr(argv[1], 'n') != NULL);
         defaultOptions = 0;
         inputfile = argv[2];
         outputfile = argv[3];
