@@ -14,6 +14,7 @@
 #define ERR_DIFFERENT_BOARD         7
 #define ERR_NO_GBE                  8
 #define ERR_NO_SLIC                 9
+#define ERR_UNKNOWN_DESCRIPTOR      10
 
 /* Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm
 *  Returns pointer to the beginning of found pattern of NULL if not found */
@@ -114,7 +115,7 @@ int main(int argc, char* argv[])
     unsigned int read;                                                          /* read bytes counter */
     unsigned char* bootefi;                                                     /* BOOTEFI header */
     unsigned char* ubf;                                                         /* UBF header */
-
+    unsigned char* descriptor;                                                  /* Descriptor region header */ 
     char hasUbf;                                                                /* flag that output file has UBF header */
     char hasGbe;                                                                /* flag that input file has GbE region */
     char hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
@@ -137,7 +138,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.5\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.6\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -429,6 +430,20 @@ int main(int argc, char* argv[])
         return ERR_OUTPUT_FILE;
     }
 
+    /* Checking descriptor region header to be valid */
+    /* Looking for common descriptor header */
+    descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_COMMON), DESCRIPTOR_HEADER_COMMON, sizeof(DESCRIPTOR_HEADER_COMMON));
+    if(!descriptor)
+    {
+        /* Looking for rare descriptor header */
+        descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_RARE), DESCRIPTOR_HEADER_RARE, sizeof(DESCRIPTOR_HEADER_RARE));
+        if(!descriptor)
+        {
+            printf("Unknown descriptor region header in output file.\n");
+            return ERR_UNKNOWN_DESCRIPTOR;
+        }
+    }
+
     /* Checking motherboard name */
     if (!skipMotherboardNameCheck && memcmp(motherboardName, bootefi + BOOTEFI_MOTHERBOARD_NAME_OFFSET, strlen((const char*)motherboardName)))
     {
@@ -619,6 +634,20 @@ int main(int argc, char* argv[])
     /* Reopening file to resize it */
     fclose(file);
     file = fopen(outputfile, "wb");
+
+    /* Checking descriptor region header to be valid again */
+    /* Looking for common descriptor header */
+    descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_COMMON), DESCRIPTOR_HEADER_COMMON, sizeof(DESCRIPTOR_HEADER_COMMON));
+    if(!descriptor)
+    {
+        /* Looking for rare descriptor header */
+        descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_RARE), DESCRIPTOR_HEADER_RARE, sizeof(DESCRIPTOR_HEADER_RARE));
+        if(!descriptor)
+        {
+            printf("Unknown descriptor region header in output file after data transfer.\n");
+            return ERR_UNKNOWN_DESCRIPTOR;
+        }
+    }
 
     /* Writing buffer to output file */
     read = fwrite(buffer, sizeof(char), filesize, file);

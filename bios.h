@@ -1,69 +1,59 @@
 #ifndef BIOS_H
 #define BIOS_H
 
+/* Descriptor */
+const unsigned char DESCRIPTOR_HEADER_COMMON[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                                  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x5A, 0xA5, 0xF0, 0x0F};
+const unsigned char DESCRIPTOR_HEADER_RARE[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 
+                                                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x78, 0xE5, 0x8C, 0x8C};
+
 /* USB BIOS Flashback */
-const unsigned char UBF_FILE_HEADER[] =                  {'\x8B','\xA6','\x3C','\x4A','\x23',
-                                                          '\x77','\xFB','\x48','\x80','\x3D',
-                                                          '\x57','\x8C','\xC1','\xFE','\xC4',
-                                                          '\x4D'};
+const unsigned char UBF_FILE_HEADER[] = {0x8B, 0xA6, 0x3C, 0x4A, 0x23, 0x77, 0xFB, 0x48, 0x80, 0x3D, 0x57, 
+                                         0x8C, 0xC1, 0xFE, 0xC4, 0x4D};
 #define UBF_FILE_HEADER_SIZE 0x800
 
 /* BOOTEFI */
-const unsigned char BOOTEFI_HEADER[] =                   {'$','B','O','O','T','E','F','I','$'};
+const unsigned char BOOTEFI_HEADER[] = {'$','B','O','O','T','E','F','I','$'};
 #define BOOTEFI_MOTHERBOARD_NAME_OFFSET 14
 #define BOOTEFI_MOTHERBOARD_NAME_LENGTH 60
 
 /* ME */
-static const unsigned char ME_HEADER[] =                 {'\x20','\x20','\x80','\x0F','\x40',
-                                                          '\x00','\x00','\x10','\x00','\x00',
-                                                          '\x00','\x00','\x00','\x00','\x00',
-                                                          '\x00'};
+static const unsigned char ME_HEADER[] = {0x20, 0x20, 0x80, 0x0F, 0x40, 0x00, 0x00, 0x10, 0x00, 0x00, 0x00, 
+                                          0x00, 0x00, 0x00, 0x00, 0x00};
 
 /* GbE */
-const unsigned char GBE_HEADER[] =                       {'\xFF','\xFF','\xFF','\xFF','\xFF',
-                                                          '\xFF','\xFF','\xFF','\xC3','\x10'};
+const unsigned char GBE_HEADER[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xC3, 0x10};
 #define GBE_MAC_OFFSET (-12)
 #define GBE_MAC_LENGTH 6
-static const unsigned char GBE_MAC_STUB[] =              {'\x88','\x88','\x88','\x88','\x87',
-                                                          '\x88'};
+static const unsigned char GBE_MAC_STUB[] = {0x88, 0x88, 0x88, 0x88, 0x87, 0x88};
 /* SLIC */
-const unsigned char MSOA_MODULE_HEADER[] =               {'\xB9','\x2A','\x90','\xA1','\x94',
-                                                          '\x53','\xF2','\x45','\x85','\x7A',
-                                                          '\x12','\x82','\x42','\x13','\xEE',
-                                                          '\xFB'};
-const unsigned char SLIC_PUBKEY_HEADER[] =               {'\xFB','\xEB','\xFF','\xCD','\xDC',
-                                                          '\x17','\xBC','\x46','\x9B','\x75',
-                                                          '\x59','\xB8','\x61','\x92','\x09',
-                                                          '\x13'};
-const unsigned char SLIC_PUBKEY_PART1[] =                {'\x78','\x02','\x02','\x40','\x6E',
-                                                          '\x01','\x00','\xF8','\x56','\x01',
-                                                          '\x00','\x19'};
+const unsigned char MSOA_MODULE_HEADER[] = {0xB9, 0x2A, 0x90, 0xA1, 0x94, 0x53, 0xF2, 0x45, 0x85, 0x7A, 0x12, 
+                                            0x82, 0x42, 0x13, 0xEE, 0xFB};
+const unsigned char SLIC_PUBKEY_HEADER[] = {0xFB, 0xEB, 0xFF, 0xCD, 0xDC, 0x17, 0xBC, 0x46, 0x9B, 0x75, 0x59, 
+                                            0xB8, 0x61, 0x92, 0x09, 0x13};
+const unsigned char SLIC_PUBKEY_PART1[] = {0x78, 0x02, 0x02, 0x40, 0x6E, 0x01, 0x00, 0xF8, 0x56, 0x01, 0x00, 
+                                           0x19};
 #define SLIC_PUBKEY_LENGTH 366
-const unsigned char SLIC_MARKER_HEADER[] =               {'\x58','\x44','\x63','\x15','\xA4',
-                                                          '\xE8','\x6D','\x43','\xAC','\x2F',
-                                                          '\x57','\xE3','\x3E','\x53','\x4C',
-                                                          '\xCF'};
-const unsigned char SLIC_MARKER_PART1[] =                {'\x75','\x4E','\x02','\x40','\x38',
-                                                          '\x00','\x00','\xF8','\x20','\x00',
-                                                          '\x00','\x19'};
+const unsigned char SLIC_MARKER_HEADER[] = {0x58, 0x44, 0x63, 0x15, 0xA4, 0xE8, 0x6D, 0x43, 0xAC, 0x2F, 0x57, 
+                                            0xE3, 0x3E, 0x53, 0x4C, 0xCF};
+const unsigned char SLIC_MARKER_PART1[] = {0x75, 0x4E, 0x02, 0x40, 0x38, 0x00, 0x00, 0xF8, 0x20, 0x00, 0x00, 
+                                           0x19};
 #define SLIC_MARKER_LENGTH 56
 #define SLIC_FREE_SPACE_LENGTH 3096
 #define MODULE_DATA_CHECKSUM_OFFSET 17
 #define MODULE_DATA_CHECKSUM_START  24
 
 /* FD44 */
-const unsigned char FD44_MODULE_HEADER[] =               {'\x0B','\x82','\x44','\xFD','\xAB',
-                                                          '\xF1','\xC0','\x41','\xAE','\x4E',
-                                                          '\x0C','\x55','\x55','\x6E','\xB9',
-                                                          '\xBD'};
+const unsigned char FD44_MODULE_HEADER[] = {0x0B, 0x82, 0x44, 0xFD, 0xAB, 0xF1, 0xC0, 0x41, 0xAE, 0x4E, 0x0C, 
+                                            0x55, 0x55, 0x6E, 0xB9, 0xBD};
 #define FD44_MODULE_HEADER_BSA_OFFSET 28
-const unsigned char FD44_MODULE_HEADER_BSA[] =           {'B', 'S', 'A', '_'};
+const unsigned char FD44_MODULE_HEADER_BSA[] = {'B', 'S', 'A', '_'};
 #define FD44_MODULE_HEADER_LENGTH 36
 #define FD44_MODULE_SIZE_OFFSET 20
 
 /* ASUSBKP */
-const unsigned char ASUSBKP_HEADER[] =                   {'A','S','U','S','B','K','P','$'};
-const unsigned char ASUSBKP_PUBKEY_HEADER[] =            {'S','2','L','P','R','\x01','\x00','\x00'};
-const unsigned char ASUSBKP_MARKER_HEADER[] =            {'K','E','Y','S','\x1C','\x00','\x00','\x00'};
+const unsigned char ASUSBKP_HEADER[] = {'A','S','U','S','B','K','P','$'};
+const unsigned char ASUSBKP_PUBKEY_HEADER[] = {'S','2','L','P','R', 0x01, 0x00, 0x00};
+const unsigned char ASUSBKP_MARKER_HEADER[] = {'K','E','Y','S', 0x1C, 0x00, 0x00, 0x00};
 
 #endif /* BIOS_H */
