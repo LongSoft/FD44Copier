@@ -5,16 +5,15 @@
 
 /* Return codes */
 #define ERR_OK                      0
-#define ERR_ARGS                    1
-#define ERR_INPUT_FILE              2
-#define ERR_OUTPUT_FILE             3
-#define ERR_MEMORY                  4
-#define ERR_NO_FD44_MODULE          5
-#define ERR_EMPTY_FD44_MODULE       6
+#define ERR_EMPTY_FD44_MODULE       1
+#define ERR_ARGS                    2
+#define ERR_INPUT_FILE              3
+#define ERR_OUTPUT_FILE             4
+#define ERR_MEMORY                  5
+#define ERR_NO_FD44_MODULE          6
 #define ERR_DIFFERENT_BOARD         7
 #define ERR_NO_GBE                  8
 #define ERR_NO_SLIC                 9
-#define ERR_UNKNOWN_DESCRIPTOR      10
 
 /* Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm
 *  Returns pointer to the beginning of found pattern of NULL if not found */
@@ -52,7 +51,7 @@ unsigned char* find_pattern(unsigned char* begin, unsigned char* end, const unsi
 }
 
 /* Finds free space between begin and end to insert new module.
- * Returns alligned pointer to empty space or NULL if it can't be found. */
+ * Returns aligned pointer to empty space or NULL if it can't be found. */
 unsigned char* find_free_space(unsigned char* begin, unsigned char* end, unsigned int space_length)
 {
     unsigned int pos;
@@ -68,7 +67,7 @@ unsigned char* find_free_space(unsigned char* begin, unsigned char* end, unsigne
         if (free_bytes == space_length)
         {
             pos -= free_bytes; /* back at the beginning of free space */
-            pos += 8 - pos%8; /* allign to 8 */
+            pos += 8 - pos%8; /* align to 8 */
             return begin + pos;
         }
     }
@@ -114,12 +113,12 @@ int main(int argc, char* argv[])
     unsigned int filesize;                                                      /* size of opened file */
     unsigned int read;                                                          /* read bytes counter */
     unsigned char* bootefi;                                                     /* BOOTEFI header */
-    unsigned char* ubf;                                                         /* UBF header */
-    unsigned char* descriptor;                                                  /* Descriptor region header */ 
-    char hasUbf;                                                                /* flag that output file has UBF header */
+    unsigned char* capsuleHeader;                                               /* Capsule header */
+    char hasCapsuleHeader;                                                      /* flag that output file has capsule header */
     char hasGbe;                                                                /* flag that input file has GbE region */
     char hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
-    char defaultOptions;                                                        /* flag that program is runned with default options */
+    char isModuleEmpty;                                                         /* flag that FD44 module is empty in input file */
+    char defaultOptions;                                                        /* flag that program is ran with default options */
     char copyModule;                                                            /* flag that FD44 module copying is requested */
     char copyGbe;                                                               /* flag that GbE MAC copying is requested */
     char copySLIC;                                                              /* flag that SLIC copying is requested */
@@ -138,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.6\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.7\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -273,7 +272,7 @@ int main(int argc, char* argv[])
             }
             hasSLIC = 1;
         }
-        else /* If SLIC headers not found, seaching for SLIC pubkey and marker in ASUSBKP module */
+        else /* If SLIC headers not found, searching for SLIC pubkey and marker in ASUSBKP module */
         {
             unsigned char* asusbkp = find_pattern(buffer, end, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
             if (asusbkp)
@@ -309,9 +308,9 @@ int main(int argc, char* argv[])
     /* Searching for FD44 module header */
     if (copyModule)
     {
-        char isEmpty = 1;
         unsigned char* module;
         unsigned char* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        isModuleEmpty = 1;
         if (!fd44)
         {
             printf("FD44 module not found in input file.\n");
@@ -319,7 +318,7 @@ int main(int argc, char* argv[])
         }
 
         /* Looking for non-empty module */
-        while(isEmpty && fd44)
+        while(isModuleEmpty && fd44)
         {
 
             /* Getting module size */
@@ -336,7 +335,7 @@ int main(int argc, char* argv[])
                     /* If found - this module is not empty */
                     if (module[pos] != 0xFF)
                     {
-                        isEmpty = 0;
+                        isModuleEmpty = 0;
                         break;
                     }
                 }
@@ -346,34 +345,35 @@ int main(int argc, char* argv[])
             fd44 = find_pattern(fd44 + FD44_MODULE_HEADER_LENGTH, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         }
 
-        /* Checking that all modules are empty */
-        if (isEmpty)
+        /* Checking if all modules are empty */
+        if (isModuleEmpty)
         {
-            printf("FD44 modules are empty in input file.\n");
-            return ERR_EMPTY_FD44_MODULE;
+            printf("FD44 modules are empty in input file. Data restoration required.\nUse FD44Editor to restore your data.\n");
         }
-                
-        /* No need to store module header */
-        fd44ModuleSize -= FD44_MODULE_HEADER_LENGTH;
+        else /* Storing module contents */       
+        {
+            /* No need to store module header */
+            fd44ModuleSize -= FD44_MODULE_HEADER_LENGTH;
         
-        /* No need to store FF bytes */
-        while (module[--fd44ModuleSize] == 0xFF)
-            ;
-        fd44ModuleSize++;
+            /* No need to store FF bytes */
+            while (module[--fd44ModuleSize] == 0xFF)
+                ;
+            fd44ModuleSize++;
 
-        /* Allocating memory for module storage */
-        fd44Module = (unsigned char*)malloc(fd44ModuleSize);
-        if (!fd44Module)
-        {
-            printf("Can't allocate memory for FD44 module.\nFD44 module can't be copied.\n");
-            return ERR_MEMORY;
-        }
+            /* Allocating memory for module storage */
+            fd44Module = (unsigned char*)malloc(fd44ModuleSize);
+            if (!fd44Module)
+            {
+                printf("Can't allocate memory for FD44 module.\nFD44 module can't be copied.\n");
+                return ERR_MEMORY;
+            }
 
-        /* Storing module contents */
-        if (!memcpy(fd44Module, module, fd44ModuleSize))
-        {
-            printf("Memcpy failed.\nFD44 module can't be copied.\n");
-            return ERR_MEMORY;
+            /* Storing module contents */
+            if (!memcpy(fd44Module, module, fd44ModuleSize))
+            {
+                printf("Memcpy failed.\nFD44 module can't be copied.\n");
+                return ERR_MEMORY;
+            }
         }
     }
 
@@ -402,7 +402,6 @@ int main(int argc, char* argv[])
         return ERR_MEMORY;
     }
     
-
     /* Reading whole file to buffer */
     read = fread((void*)buffer, sizeof(char), filesize, file);
     if (read != filesize)
@@ -411,14 +410,14 @@ int main(int argc, char* argv[])
         return ERR_OUTPUT_FILE;
     }
 
-    /* Searching for UBF signature, if found - remove UBF header */
-    hasUbf = 0;
-    ubf = find_pattern(buffer, buffer + sizeof(UBF_FILE_HEADER), UBF_FILE_HEADER, sizeof(UBF_FILE_HEADER));
-    if (ubf)
+    /* Searching for capsule file signature, if found - remove capsule file header */
+    hasCapsuleHeader = 0;
+    capsuleHeader = find_pattern(buffer, buffer + sizeof(CAPSULE_FILE_HEADER), CAPSULE_FILE_HEADER, sizeof(CAPSULE_FILE_HEADER));
+    if (capsuleHeader)
     {
-        hasUbf = 1;
-        buffer += UBF_FILE_HEADER_SIZE;
-        filesize -= UBF_FILE_HEADER_SIZE;
+        hasCapsuleHeader = 1;
+        buffer += CAPSULE_FILE_HEADER_SIZE;
+        filesize -= CAPSULE_FILE_HEADER_SIZE;
     }
     end = buffer + filesize;
 
@@ -428,20 +427,6 @@ int main(int argc, char* argv[])
     {
         printf("ASUS BIOS file signature not found in output file.\n");
         return ERR_OUTPUT_FILE;
-    }
-
-    /* Checking descriptor region header to be valid */
-    /* Looking for common descriptor header */
-    descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_COMMON), DESCRIPTOR_HEADER_COMMON, sizeof(DESCRIPTOR_HEADER_COMMON));
-    if(!descriptor)
-    {
-        /* Looking for rare descriptor header */
-        descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_RARE), DESCRIPTOR_HEADER_RARE, sizeof(DESCRIPTOR_HEADER_RARE));
-        if(!descriptor)
-        {
-            printf("Unknown descriptor region header in output file.\n");
-            return ERR_UNKNOWN_DESCRIPTOR;
-        }
     }
 
     /* Checking motherboard name */
@@ -592,62 +577,50 @@ int main(int argc, char* argv[])
             return ERR_NO_FD44_MODULE;
         }
 
-        /* Copying data to all BSA_ modules */
-        isCopied = 0;
-        while (fd44)
+        if (!isModuleEmpty)
         {
-            /* Getting module size */
-            size2int(fd44 + FD44_MODULE_SIZE_OFFSET, &currentModuleSize);
-            if (!memcmp(fd44 + FD44_MODULE_HEADER_BSA_OFFSET, FD44_MODULE_HEADER_BSA, sizeof(FD44_MODULE_HEADER_BSA)))
+            /* Copying data to all BSA_ modules */
+            isCopied = 0;
+            while (fd44)
             {
-                module = fd44 + FD44_MODULE_HEADER_LENGTH;
-                /* Checking that there is enough space in module to insert data */
-                if (currentModuleSize - FD44_MODULE_HEADER_LENGTH < fd44ModuleSize)
+                /* Getting module size */
+                size2int(fd44 + FD44_MODULE_SIZE_OFFSET, &currentModuleSize);
+                if (!memcmp(fd44 + FD44_MODULE_HEADER_BSA_OFFSET, FD44_MODULE_HEADER_BSA, sizeof(FD44_MODULE_HEADER_BSA)))
                 {
-                    printf("FD44 module at %08X is too small.\n", module - buffer);
-                    fd44 = find_pattern(fd44 + currentModuleSize, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
-                    break;
+                    module = fd44 + FD44_MODULE_HEADER_LENGTH;
+                    /* Checking that there is enough space in module to insert data */
+                    if (currentModuleSize - FD44_MODULE_HEADER_LENGTH < fd44ModuleSize)
+                    {
+                        printf("FD44 module at %08X is too small.\n", module - buffer);
+                        fd44 = find_pattern(fd44 + currentModuleSize, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+                        break;
+                    }
+                    /* Copying module data*/
+                    if (!memcpy(module, fd44Module, fd44ModuleSize))
+                    {
+                        printf("Memcpy failed.\nFD44 module can't be copied.\n");
+                        return ERR_MEMORY;
+                    }
+                    isCopied = 1;
                 }
-                /* Copying module data*/
-                if (!memcpy(module, fd44Module, fd44ModuleSize))
-                {
-                    printf("Memcpy failed.\nFD44 module can't be copied.\n");
-                    return ERR_MEMORY;
-                }
-                isCopied = 1;
-            }
             
-            fd44 = find_pattern(fd44 + currentModuleSize, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+                fd44 = find_pattern(fd44 + currentModuleSize, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+            }
+                
+            /* Checking if there is at least one non-empty module after copying */
+            if(isCopied)
+                printf("FD44 module copied.\n");
+            else
+            {
+                printf("FD44 module can't be copied.\n");
+                return ERR_NO_FD44_MODULE;
+            }
         }
-        
-        /* Checking if there is at least one non-empty module after copying */
-        if(isCopied)
-            printf("FD44 module copied.\n");
-        else
-        {
-            printf("FD44 module can't be copied.\n");
-            return ERR_NO_FD44_MODULE;
-        }
-
     }
 
     /* Reopening file to resize it */
     fclose(file);
     file = fopen(outputfile, "wb");
-
-    /* Checking descriptor region header to be valid again */
-    /* Looking for common descriptor header */
-    descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_COMMON), DESCRIPTOR_HEADER_COMMON, sizeof(DESCRIPTOR_HEADER_COMMON));
-    if(!descriptor)
-    {
-        /* Looking for rare descriptor header */
-        descriptor = find_pattern(buffer, buffer + sizeof(DESCRIPTOR_HEADER_RARE), DESCRIPTOR_HEADER_RARE, sizeof(DESCRIPTOR_HEADER_RARE));
-        if(!descriptor)
-        {
-            printf("Unknown descriptor region header in output file after data transfer.\n");
-            return ERR_UNKNOWN_DESCRIPTOR;
-        }
-    }
 
     /* Writing buffer to output file */
     read = fwrite(buffer, sizeof(char), filesize, file);
@@ -658,15 +631,18 @@ int main(int argc, char* argv[])
     }
 
     /* Cleaning */
-    if (hasUbf)
+    if (hasCapsuleHeader)
     {
-        printf("UBF header removed.\n");
-        buffer -= UBF_FILE_HEADER_SIZE;
+        printf("Capsule file header removed.\n");
+        buffer -= CAPSULE_FILE_HEADER_SIZE;
     }
     free(buffer);
     if (copyModule)
         free(fd44Module);
     fclose(file);
+
+    if (isModuleEmpty)
+        return ERR_EMPTY_FD44_MODULE;
 
     return ERR_OK;
 }
