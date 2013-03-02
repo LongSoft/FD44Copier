@@ -137,7 +137,7 @@ int main(int argc, char* argv[])
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.7\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.8\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -637,7 +637,7 @@ int main(int argc, char* argv[])
         buffer -= CAPSULE_FILE_HEADER_SIZE;
     }
     free(buffer);
-    if (copyModule)
+    if (copyModule && !isModuleEmpty)
         free(fd44Module);
     fclose(file);
 
