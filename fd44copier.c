@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdint.h>
 #include "bios.h"
 
 /* Return codes */
@@ -17,12 +18,12 @@
 
 /* Implementation of GNU memmem function using Boyer-Moore-Horspool algorithm
 *  Returns pointer to the beginning of found pattern of NULL if not found */
-unsigned char* find_pattern(unsigned char* begin, unsigned char* end, const unsigned char* pattern, unsigned int plen)
+uint8_t* find_pattern(uint8_t* begin, uint8_t* end, const uint8_t* pattern, uint32_t plen)
 {
-    unsigned int scan = 0;
-    unsigned int bad_char_skip[256];
-    unsigned int last;
-    unsigned int slen;
+    uint32_t scan = 0;
+    uint32_t bad_char_skip[256];
+    uint32_t last;
+    uint32_t slen;
 
     if (plen == 0 || !begin || !pattern || !end || end <= begin)
         return NULL;
@@ -52,33 +53,40 @@ unsigned char* find_pattern(unsigned char* begin, unsigned char* end, const unsi
 
 /* Finds free space between begin and end to insert new module.
  * Returns aligned pointer to empty space or NULL if it can't be found. */
-unsigned char* find_free_space(unsigned char* begin, unsigned char* end, unsigned int space_length)
+uint8_t* find_free_space(uint8_t* begin, uint8_t* end, uint32_t space_length)
 {
-    unsigned int pos;
-    unsigned int free_bytes;
-    unsigned int size = end - begin;
-    free_bytes = 0;
-    for (pos = 0; pos < size; pos++)
-    {
-        if (*(begin+pos) == 0xFF)
-            free_bytes++;
-        else
-            free_bytes = 0;
-        if (free_bytes == space_length)
-        {
-            pos -= free_bytes; /* back at the beginning of free space */
-            pos += 8 - pos%8; /* align to 8 */
-            return begin + pos;
-        }
-    }
-    return NULL;
+    uint8_t* current;
+    uint32_t size;
+    uint32_t allignment;
+
+    current = end;
+    
+    // Skipping 0xFF bytes from end
+    while (*current-- == 0xFF);
+    current++;
+
+    // Error if begin passed, all bytes are 0xFF, which is incorrect
+    if (current < begin)
+        return NULL;
+
+    // Alligning pounter to 8
+    size = current - begin;
+    if (size % 8)
+        allignment = 8 - size % 8;
+    else
+        allignment = 0;
+    
+    if (size + allignment < space_length)
+        return NULL;
+
+    return current + allignment;
 }
 
 /* Calculates 2's complement 8-bit checksum of data from data[0] to data[length-1] and stores it to *checksum
  * Returns 1 on success and 0 on failure */
-int calculate_checksum(unsigned char* data, unsigned int length, unsigned char* checksum)
+int calculate_checksum(uint8_t* data, uint32_t length, uint8_t* checksum)
 {
-    unsigned char counter;
+    uint8_t counter;
 
     if (!data || !length || !checksum)
         return 0;
@@ -89,9 +97,9 @@ int calculate_checksum(unsigned char* data, unsigned int length, unsigned char* 
     return 1;
 }
 
-/* Converts SIZE field of MODULE_HEADER (3 bytes in reversed order) to unsigned int.
+/* Converts SIZE field of MODULE_HEADER (3 bytes in reversed order) to uint32_t.
  * Returns 1 on success or 0 on error */
-int size2int(unsigned char* module_size, unsigned int* size)
+int size2int(uint8_t* module_size, uint32_t* size)
 {
     if (!module_size || !size)
         return 0;
@@ -108,36 +116,36 @@ int main(int argc, char* argv[])
     FILE* file;                                                                 /* file pointer to work with input and output files */
     char* inputfile;                                                            /* path to input file*/
     char* outputfile;                                                           /* path to output file */
-    unsigned char* buffer;                                                      /* buffer to read input and output file */
-    unsigned char* end;                                                         /* pointer to the end of buffer */
-    unsigned int filesize;                                                      /* size of opened file */
-    unsigned int read;                                                          /* read bytes counter */
-    unsigned char* bootefi;                                                     /* BOOTEFI header */
-    unsigned char* capsuleHeader;                                               /* Capsule header */
-    char hasCapsuleHeader;                                                      /* flag that output file has capsule header */
-    char hasGbe;                                                                /* flag that input file has GbE region */
-    char hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
-    char isModuleEmpty;                                                         /* flag that FD44 module is empty in input file */
-    char defaultOptions;                                                        /* flag that program is ran with default options */
-    char copyModule;                                                            /* flag that FD44 module copying is requested */
-    char copyGbe;                                                               /* flag that GbE MAC copying is requested */
-    char copySLIC;                                                              /* flag that SLIC copying is requested */
-    char skipMotherboardNameCheck;                                              /* flag that motherboard name in output file doesn't need to be checked */
-    unsigned char motherboardName[BOOTEFI_MOTHERBOARD_NAME_LENGTH];             /* motherboard name storage */
-    unsigned char gbeMac[GBE_MAC_LENGTH];                                       /* GbE MAC storage */
-    unsigned char slicPubkey[SLIC_PUBKEY_LENGTH                                 /* SLIC----*/
+    uint8_t* buffer;                                                      /* buffer to read input and output file */
+    uint8_t* end;                                                         /* pointer to the end of buffer */
+    uint32_t filesize;                                                          /* size of opened file */
+    uint32_t read;                                                              /* read bytes counter */
+    uint8_t* bootefi;                                                     /* BOOTEFI header */
+    uint8_t* capsuleHeader;                                               /* Capsule header */
+    int8_t hasCapsuleHeader;                                                      /* flag that output file has capsule header */
+    int8_t hasGbe;                                                                /* flag that input file has GbE region */
+    int8_t hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
+    int8_t isModuleEmpty;                                                         /* flag that FD44 module is empty in input file */
+    int8_t defaultOptions;                                                        /* flag that program is ran with default options */
+    int8_t copyModule;                                                            /* flag that FD44 module copying is requested */
+    int8_t copyGbe;                                                               /* flag that GbE MAC copying is requested */
+    int8_t copySLIC;                                                              /* flag that SLIC copying is requested */
+    int8_t skipMotherboardNameCheck;                                              /* flag that motherboard name in output file doesn't need to be checked */
+    uint8_t motherboardName[BOOTEFI_MOTHERBOARD_NAME_LENGTH];             /* motherboard name storage */
+    uint8_t gbeMac[GBE_MAC_LENGTH];                                       /* GbE MAC storage */
+    uint8_t slicPubkey[SLIC_PUBKEY_LENGTH                                 /* SLIC----*/
                              - sizeof(SLIC_PUBKEY_HEADER)                       /* pubkey--*/
                              - sizeof(SLIC_PUBKEY_PART1)];                      /* storage */
-    unsigned char slicMarker[SLIC_MARKER_LENGTH                                 /* SLIC----*/
+    uint8_t slicMarker[SLIC_MARKER_LENGTH                                 /* SLIC----*/
                              - sizeof(SLIC_MARKER_HEADER)                       /* marker--*/
                              - sizeof(SLIC_MARKER_PART1)];                      /* storage */
-    unsigned char* fd44Module;                                                  /* FD44 module storage, will be allocated later */
-    unsigned int fd44ModuleSize;                                                /* Size of FD44 module */
+    uint8_t* fd44Module;                                                  /* FD44 module storage, will be allocated later */
+    uint32_t fd44ModuleSize;                                                /* Size of FD44 module */
     
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.8\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.6.9\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -187,7 +195,7 @@ int main(int argc, char* argv[])
     fseek(file, 0, SEEK_SET);
 
     /* Allocating memory for buffer */
-    buffer = (unsigned char*)malloc(filesize);
+    buffer = (uint8_t*)malloc(filesize);
     if (!buffer)
     {
         printf("Can't allocate memory for input file.\n");
@@ -221,7 +229,7 @@ int main(int argc, char* argv[])
     /* Searching for GbE and storing MAC address if it is found */
     if (copyGbe)
     {
-        unsigned char* gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
+        uint8_t* gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
         hasGbe = 0;
         if (gbe)
         {
@@ -229,7 +237,7 @@ int main(int argc, char* argv[])
             /* Checking if first GbE is a stub */
             if (!memcmp(gbe + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
             {
-                unsigned char* gbe2;
+                uint8_t* gbe2;
                 gbe2 = find_pattern(gbe + sizeof(GBE_HEADER), end, GBE_HEADER, sizeof(GBE_HEADER));
                 /* Checking if second GbE is not a stub */
                 if(gbe2 && memcmp(gbe2 + GBE_MAC_OFFSET, GBE_MAC_STUB, sizeof(GBE_MAC_STUB)))
@@ -253,8 +261,8 @@ int main(int argc, char* argv[])
     /* Searching for SLIC pubkey and marker and storing them if found*/
     if (copySLIC)
     {
-        unsigned char* slic_pubkey = find_pattern(buffer, end, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
-        unsigned char* slic_marker = find_pattern(buffer, end, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
+        uint8_t* slic_pubkey = find_pattern(buffer, end, SLIC_PUBKEY_HEADER, sizeof(SLIC_PUBKEY_HEADER));
+        uint8_t* slic_marker = find_pattern(buffer, end, SLIC_MARKER_HEADER, sizeof(SLIC_MARKER_HEADER));
         hasSLIC = 0;
         if (slic_pubkey && slic_marker)
         {
@@ -274,7 +282,7 @@ int main(int argc, char* argv[])
         }
         else /* If SLIC headers not found, searching for SLIC pubkey and marker in ASUSBKP module */
         {
-            unsigned char* asusbkp = find_pattern(buffer, end, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
+            uint8_t* asusbkp = find_pattern(buffer, end, ASUSBKP_HEADER, sizeof(ASUSBKP_HEADER));
             if (asusbkp)
             {
                 slic_pubkey = find_pattern(asusbkp, end, ASUSBKP_PUBKEY_HEADER, sizeof(ASUSBKP_PUBKEY_HEADER));
@@ -308,8 +316,8 @@ int main(int argc, char* argv[])
     /* Searching for FD44 module header */
     if (copyModule)
     {
-        unsigned char* module;
-        unsigned char* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        uint8_t* module;
+        uint8_t* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         isModuleEmpty = 1;
         if (!fd44)
         {
@@ -327,7 +335,7 @@ int main(int argc, char* argv[])
             /* Checking that module has BSA signature */
             if (!memcmp(fd44 + FD44_MODULE_HEADER_BSA_OFFSET, FD44_MODULE_HEADER_BSA, sizeof(FD44_MODULE_HEADER_BSA)))
             {
-                unsigned int pos;
+                uint32_t pos;
                 /* Looking for non-FF byte starting from the beginning of data */
                 module = fd44 + FD44_MODULE_HEADER_LENGTH;
                 for (pos = 0; pos < fd44ModuleSize - FD44_MODULE_HEADER_LENGTH; pos++)
@@ -361,7 +369,7 @@ int main(int argc, char* argv[])
             fd44ModuleSize++;
 
             /* Allocating memory for module storage */
-            fd44Module = (unsigned char*)malloc(fd44ModuleSize);
+            fd44Module = (uint8_t*)malloc(fd44ModuleSize);
             if (!fd44Module)
             {
                 printf("Can't allocate memory for FD44 module.\nFD44 module can't be copied.\n");
@@ -395,7 +403,7 @@ int main(int argc, char* argv[])
     fseek(file, 0, SEEK_SET);
 
     /* Allocating memory for buffer */
-    buffer = (unsigned char*)malloc(filesize);
+    buffer = (uint8_t*)malloc(filesize);
     if (!buffer)
     {
         printf("Can't allocate memory for output file.\n");
@@ -440,7 +448,7 @@ int main(int argc, char* argv[])
     if (copyGbe && hasGbe)
     {
         /* First GbE block */
-        unsigned char* gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
+        uint8_t* gbe = find_pattern(buffer, end, GBE_HEADER, sizeof(GBE_HEADER));
         if (!gbe)
         {
             printf("GbE region not found in output file.\n");
@@ -467,10 +475,13 @@ int main(int argc, char* argv[])
     /* Searching for EFI volume containing MSOA module and add SLIC pubkey and marker modules if found */
     if (copySLIC && hasSLIC)
     {
-        unsigned char* msoa_module;
-        unsigned char* pubkey_module;
-        unsigned char* marker_module;
-        unsigned char  data_checksum;
+        uint8_t* efi_volume_begin;
+        uint8_t* efi_volume_end;
+        uint8_t* msoa_module;
+        uint8_t* pubkey_module;
+        uint8_t* marker_module;
+        uint8_t  data_checksum;
+        
         do
         {
             /* Searching for existing SLIC modules */
@@ -482,16 +493,36 @@ int main(int argc, char* argv[])
                 break;
             }
 
-            /* Searching for MSOA module */
-            msoa_module = find_pattern(buffer, end, MSOA_MODULE_HEADER, sizeof(MSOA_MODULE_HEADER));
+            /* Searching for second EFI Volume to instert SLIC */
+            efi_volume_begin = find_pattern(buffer, end, EFI_VOLUME_HEADER, sizeof(EFI_VOLUME_HEADER));
+            if (!efi_volume_begin)
+            {
+                printf("First EFI volume not found in output file. The file is possibly corrupted. SLIC table can't be inserted.");
+                break;
+            }
+            efi_volume_end = efi_volume_begin + *(uint32_t*)(efi_volume_begin + sizeof(EFI_VOLUME_HEADER));
+            efi_volume_begin = find_pattern(efi_volume_end, end, EFI_VOLUME_HEADER, sizeof(EFI_VOLUME_HEADER));
+            if (!efi_volume_begin)
+            {
+                printf("Second EFI volume not found in output file. The file is possibly corrupted. SLIC table can't be inserted.");
+                break;
+            }
+            efi_volume_end = efi_volume_begin + *(uint32_t*)(efi_volume_begin + sizeof(EFI_VOLUME_HEADER)) - 16; 
+            
+            /* Searching for DummyMSOA or MSOA module */
+            msoa_module = find_pattern(efi_volume_begin, efi_volume_end, DUMMY_MSOA_MODULE_HEADER, sizeof(DUMMY_MSOA_MODULE_HEADER));
             if (!msoa_module)
             {
-                printf("MSOA module not found in output file.\nSLIC table can't be copied.\n");
-                break;
+                msoa_module = find_pattern(efi_volume_begin, efi_volume_end, MSOA_MODULE_HEADER, sizeof(MSOA_MODULE_HEADER));
+                if (!msoa_module)
+                {
+                    printf("DummyMSOA and MSOA module not found in first EFI volume.\nSLIC table can't be copied.\n");
+                    break;
+                }
             }
 
             /* Searching for free space at the end of EFI volume with MSOA module to insert pubkey module */
-            pubkey_module = find_free_space(msoa_module, end, SLIC_FREE_SPACE_LENGTH);
+            pubkey_module = find_free_space(efi_volume_begin, efi_volume_end, SLIC_PUBKEY_LENGTH + SLIC_MARKER_LENGTH);
             if (!pubkey_module)
             {
                 printf("Not enough free space to insert SLIC modules.\nSLIC table can't be copied.\n");
@@ -526,7 +557,7 @@ int main(int argc, char* argv[])
             pubkey_module[MODULE_DATA_CHECKSUM_OFFSET] = data_checksum;
 
             /* Searching for free space to insert marker module */
-            marker_module = find_free_space(pubkey_module, end, SLIC_MARKER_LENGTH + 8);
+            marker_module = find_free_space(pubkey_module, efi_volume_end, SLIC_MARKER_LENGTH);
             if (!marker_module)
             {
                 printf("Not enough free space to insert marker module.\nSLIC table can't be copied.\n");
@@ -568,9 +599,9 @@ int main(int argc, char* argv[])
     if (copyModule)
     {
         char isCopied;
-        unsigned int currentModuleSize;
-        unsigned char* module;
-        unsigned char* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
+        uint32_t currentModuleSize;
+        uint8_t* module;
+        uint8_t* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         if (!fd44)
         {
             printf("FD44 module not found in output file.\n");
