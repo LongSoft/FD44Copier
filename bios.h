@@ -4,9 +4,22 @@
 #include <stdint.h>
 
 /* Capsule header */
-const uint8_t CAPSULE_FILE_HEADER[] = {0x8B, 0xA6, 0x3C, 0x4A, 0x23, 0x77, 0xFB, 0x48, 0x80, 0x3D, 0x57, 
+typedef struct _EFI_CAPSULE_HEADER {
+    uint8_t   CapsuleGuid[16];
+    uint32_t  HeaderSize;
+    uint32_t  Flags;
+    uint32_t  CapsuleImageSize;
+} EFI_CAPSULE_HEADER;
+
+/* AMI Aptio extended capsule header */
+typedef struct _APTIO_CAPSULE_HEADER {
+    EFI_CAPSULE_HEADER    CapsuleHeader;
+    uint16_t              RomImageOffset;	/* offset in bytes from the beginning of the capsule header to the start of
+                                               the capsule volume */
+} APTIO_CAPSULE_HEADER;
+
+const uint8_t APTIO_CAPSULE_GUID[] = { 0x8B, 0xA6, 0x3C, 0x4A, 0x23, 0x77, 0xFB, 0x48, 0x80, 0x3D, 0x57,
                                              0x8C, 0xC1, 0xFE, 0xC4, 0x4D};
-#define CAPSULE_FILE_HEADER_SIZE 0x800
 
 /* BOOTEFI */
 const uint8_t BOOTEFI_HEADER[] = {'$','B','O','O','T','E','F','I','$'};

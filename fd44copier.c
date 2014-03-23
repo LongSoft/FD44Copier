@@ -113,24 +113,25 @@ int size2int(uint8_t* module_size, uint32_t* size)
 /* Entry point */
 int main(int argc, char* argv[])
 {
-    FILE* file;                                                                 /* file pointer to work with input and output files */
-    char* inputfile;                                                            /* path to input file*/
-    char* outputfile;                                                           /* path to output file */
+    FILE* file;                                                           /* file pointer to work with input and output files */
+    char* inputfile;                                                      /* path to input file*/
+    char* outputfile;                                                     /* path to output file */
     uint8_t* buffer;                                                      /* buffer to read input and output file */
     uint8_t* end;                                                         /* pointer to the end of buffer */
-    uint32_t filesize;                                                          /* size of opened file */
-    uint32_t read;                                                              /* read bytes counter */
+    uint32_t filesize;                                                    /* size of opened file */
+    uint32_t read;                                                        /* read bytes counter */
     uint8_t* bootefi;                                                     /* BOOTEFI header */
     uint8_t* capsuleHeader;                                               /* Capsule header */
-    int8_t hasCapsuleHeader;                                                      /* flag that output file has capsule header */
-    int8_t hasGbe;                                                                /* flag that input file has GbE region */
-    int8_t hasSLIC;                                                               /* flag that input file has SLIC pubkey and marker */
-    int8_t isModuleEmpty;                                                         /* flag that FD44 module is empty in input file */
-    int8_t defaultOptions;                                                        /* flag that program is ran with default options */
-    int8_t copyModule;                                                            /* flag that FD44 module copying is requested */
-    int8_t copyGbe;                                                               /* flag that GbE MAC copying is requested */
-    int8_t copySLIC;                                                              /* flag that SLIC copying is requested */
-    int8_t skipMotherboardNameCheck;                                              /* flag that motherboard name in output file doesn't need to be checked */
+    int8_t hasCapsuleHeader;                                              /* flag that output file has capsule header */
+    uint16_t headerSize;                                                  /* size of capsule header */
+    int8_t hasGbe;                                                        /* flag that input file has GbE region */
+    int8_t hasSLIC;                                                       /* flag that input file has SLIC pubkey and marker */
+    int8_t isModuleEmpty;                                                 /* flag that FD44 module is empty in input file */
+    int8_t defaultOptions;                                                /* flag that program is ran with default options */
+    int8_t copyModule;                                                    /* flag that FD44 module copying is requested */
+    int8_t copyGbe;                                                       /* flag that GbE MAC copying is requested */
+    int8_t copySLIC;                                                      /* flag that SLIC copying is requested */
+    int8_t skipMotherboardNameCheck;                                      /* flag that motherboard name in output file doesn't need to be checked */
     uint8_t motherboardName[BOOTEFI_MOTHERBOARD_NAME_LENGTH];             /* motherboard name storage */
     uint8_t gbeMac[GBE_MAC_LENGTH];                                       /* GbE MAC storage */
     uint8_t slicPubkey[SLIC_PUBKEY_LENGTH                                 /* SLIC----*/
@@ -140,12 +141,12 @@ int main(int argc, char* argv[])
                              - sizeof(SLIC_MARKER_HEADER)                       /* marker--*/
                              - sizeof(SLIC_MARKER_PART1)];                      /* storage */
     uint8_t* fd44Module;                                                  /* FD44 module storage, will be allocated later */
-    uint32_t fd44ModuleSize;                                                /* Size of FD44 module */
+    uint32_t fd44ModuleSize;                                              /* size of FD44 module */
     
 
     if (argc < 3 || (argv[1][0] == '-' && argc < 4))
     {
-        printf("FD44Copier v0.6.9\nThis program copies GbE MAC address, FD44 module data,\n"\
+        printf("FD44Copier v0.7.0\nThis program copies GbE MAC address, FD44 module data,\n"\
                "SLIC pubkey and marker from one BIOS image file to another.\n\n"
                "Usage: FD44Copier <-OPTIONS> INFILE OUTFILE\n\n"
                "Options: m - copy module data.\n"
@@ -420,12 +421,14 @@ int main(int argc, char* argv[])
 
     /* Searching for capsule file signature, if found - remove capsule file header */
     hasCapsuleHeader = 0;
-    capsuleHeader = find_pattern(buffer, buffer + sizeof(CAPSULE_FILE_HEADER), CAPSULE_FILE_HEADER, sizeof(CAPSULE_FILE_HEADER));
+    capsuleHeader = find_pattern(buffer, buffer + sizeof(APTIO_CAPSULE_GUID), APTIO_CAPSULE_GUID, sizeof(APTIO_CAPSULE_GUID));
     if (capsuleHeader)
     {
         hasCapsuleHeader = 1;
-        buffer += CAPSULE_FILE_HEADER_SIZE;
-        filesize -= CAPSULE_FILE_HEADER_SIZE;
+        APTIO_CAPSULE_HEADER *header = (APTIO_CAPSULE_HEADER*)buffer;
+        headerSize = header->RomImageOffset;
+        buffer += headerSize;
+        filesize -= headerSize;
     }
     end = buffer + filesize;
 
@@ -665,7 +668,7 @@ int main(int argc, char* argv[])
     if (hasCapsuleHeader)
     {
         printf("Capsule file header removed.\n");
-        buffer -= CAPSULE_FILE_HEADER_SIZE;
+        buffer -= headerSize;
     }
     free(buffer);
     if (copyModule && !isModuleEmpty)
