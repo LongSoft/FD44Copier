@@ -1,3 +1,5 @@
+#define  _CRT_SECURE_NO_WARNINGS
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -140,7 +142,7 @@ int main(int argc, char* argv[])
     uint8_t slicMarker[SLIC_MARKER_LENGTH                                 /* SLIC----*/
                              - sizeof(SLIC_MARKER_HEADER)                       /* marker--*/
                              - sizeof(SLIC_MARKER_PART1)];                      /* storage */
-    uint8_t* fd44Module;                                                  /* FD44 module storage, will be allocated later */
+    uint8_t* fd44Module = 0;                                              /* FD44 module storage, will be allocated later */
     uint32_t fd44ModuleSize;                                              /* size of FD44 module */
     
 
@@ -317,7 +319,7 @@ int main(int argc, char* argv[])
     /* Searching for FD44 module header */
     if (copyModule)
     {
-        uint8_t* module;
+        uint8_t* module = 0;
         uint8_t* fd44 = find_pattern(buffer, end, FD44_MODULE_HEADER, sizeof(FD44_MODULE_HEADER));
         isModuleEmpty = 1;
         if (!fd44)
