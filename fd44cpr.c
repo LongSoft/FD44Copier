@@ -128,7 +128,7 @@ int main(int argc, char* argv[])
     uint16_t headerSize;                                                  /* size of capsule header */
     int8_t hasGbe;                                                        /* flag that input file has GbE region */
     int8_t hasSLIC;                                                       /* flag that input file has SLIC pubkey and marker */
-    int8_t isModuleEmpty;                                                 /* flag that FD44 module is empty in input file */
+    int8_t isModuleEmpty = 0;                                             /* flag that FD44 module is empty in input file */
     int8_t defaultOptions;                                                /* flag that program is ran with default options */
     int8_t copyModule;                                                    /* flag that FD44 module copying is requested */
     int8_t copyGbe;                                                       /* flag that GbE MAC copying is requested */
@@ -426,8 +426,8 @@ int main(int argc, char* argv[])
     capsuleHeader = find_pattern(buffer, buffer + sizeof(APTIO_CAPSULE_GUID), APTIO_CAPSULE_GUID, sizeof(APTIO_CAPSULE_GUID));
     if (capsuleHeader)
     {
-        hasCapsuleHeader = 1;
         APTIO_CAPSULE_HEADER *header = (APTIO_CAPSULE_HEADER*)buffer;
+        hasCapsuleHeader = 1;
         headerSize = header->RomImageOffset;
         buffer += headerSize;
         filesize -= headerSize;

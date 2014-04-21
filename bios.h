@@ -3,18 +3,13 @@
 
 #include <stdint.h>
 
-/* Capsule header */
-typedef struct _EFI_CAPSULE_HEADER {
+/* AMI Aptio extended capsule header */
+typedef struct _APTIO_CAPSULE_HEADER {
     uint8_t   CapsuleGuid[16];
     uint32_t  HeaderSize;
     uint32_t  Flags;
-    uint32_t  CapsuleImageSize;
-} EFI_CAPSULE_HEADER;
-
-/* AMI Aptio extended capsule header */
-typedef struct _APTIO_CAPSULE_HEADER {
-    EFI_CAPSULE_HEADER    CapsuleHeader;
-    uint16_t              RomImageOffset;	/* offset in bytes from the beginning of the capsule header to the start of
+    uint32_t  CapsuleImageSize; 
+    uint16_t  RomImageOffset;	/* offset in bytes from the beginning of the capsule header to the start of
                                                the capsule volume */
 } APTIO_CAPSULE_HEADER;
 
